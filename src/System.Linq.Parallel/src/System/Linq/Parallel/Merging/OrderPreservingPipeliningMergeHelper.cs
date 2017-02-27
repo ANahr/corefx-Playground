@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 // =+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
 //
@@ -9,6 +10,7 @@
 
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -133,7 +135,7 @@ namespace System.Linq.Parallel
             if (keyComparer == Util.GetDefaultComparer<int>())
             {
                 Debug.Assert(typeof(TKey) == typeof(int));
-                _producerComparer = (IComparer<Producer<TKey>>)(object)new ProducerComparerInt();
+                _producerComparer = (IComparer<Producer<TKey>>)new ProducerComparerInt();
             }
             else
             {
@@ -165,6 +167,7 @@ namespace System.Linq.Parallel
         // Returns the results as an array.
         //
 
+        [ExcludeFromCodeCoverage]
         public TOutput[] GetResultsAsArray()
         {
             Debug.Fail("An ordered pipelining merge is not intended to be used this way.");
@@ -432,7 +435,7 @@ namespace System.Linq.Parallel
                         // Give an empty buffer to the producer
                         _mergeHelper._buffers[producer] = new Queue<Pair<TKey, TOutput>>(INITIAL_BUFFER_SIZE);
                         // No return statement.
-                        // This is the only branch that contines below of the lock region.
+                        // This is the only branch that continues below of the lock region.
                     }
                 }
 

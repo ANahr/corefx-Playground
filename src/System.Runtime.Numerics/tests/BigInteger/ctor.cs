@@ -1,7 +1,7 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using Tools;
 using Xunit;
 
 namespace System.Numerics.Tests
@@ -718,7 +718,7 @@ namespace System.Numerics.Tests
             // ctor(byte[]): array with a lot of leading zeros
             for (int i = 0; i < s_samples; i++)
             {
-                tempUInt64 = (UInt32)s_random.Next(Int32.MinValue, Int32.MaxValue);
+                tempUInt64 = unchecked((UInt32)s_random.Next(Int32.MinValue, Int32.MaxValue));
                 tempByteArray = BitConverter.GetBytes(tempUInt64);
 
                 VerifyCtorByteArray(
@@ -740,7 +740,7 @@ namespace System.Numerics.Tests
             // ctor(byte[]): array 4 bytes
             for (int i = 0; i < s_samples; i++)
             {
-                tempUInt64 = (UInt32)s_random.Next(Int32.MinValue, Int32.MaxValue);
+                tempUInt64 = unchecked((UInt32)s_random.Next(Int32.MinValue, Int32.MaxValue));
                 tempByteArray = BitConverter.GetBytes(tempUInt64);
 
                 if (tempUInt64 > Int32.MaxValue)
@@ -778,7 +778,7 @@ namespace System.Numerics.Tests
             // ctor(byte[]): array 5 bytes
             for (int i = 0; i < s_samples; i++)
             {
-                tempUInt64 = (UInt32)s_random.Next(Int32.MinValue, Int32.MaxValue);
+                tempUInt64 = unchecked((UInt32)s_random.Next(Int32.MinValue, Int32.MaxValue));
                 tempUInt64 <<= 8;
                 tempUInt64 += (UInt64)s_random.Next(0, 256);
                 tempByteArray = BitConverter.GetBytes(tempUInt64);
@@ -820,9 +820,9 @@ namespace System.Numerics.Tests
             // ctor(byte[]): array 8 bytes
             for (int i = 0; i < s_samples; i++)
             {
-                tempUInt64 = (UInt32)s_random.Next(Int32.MinValue, Int32.MaxValue);
+                tempUInt64 = unchecked((UInt32)s_random.Next(Int32.MinValue, Int32.MaxValue));
                 tempUInt64 <<= 32;
-                tempUInt64 += (UInt32)s_random.Next(Int32.MinValue, Int32.MaxValue);
+                tempUInt64 += unchecked((UInt32)s_random.Next(Int32.MinValue, Int32.MaxValue));
                 tempByteArray = BitConverter.GetBytes(tempUInt64);
 
                 if (tempUInt64 > Int64.MaxValue)

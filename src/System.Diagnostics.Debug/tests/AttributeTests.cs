@@ -1,4 +1,8 @@
-﻿using System;
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
+
+using System;
 
 using Xunit;
 
@@ -13,7 +17,7 @@ namespace System.Diagnostics.Tests
             new DebuggerBrowsableAttribute(DebuggerBrowsableState.Collapsed);
             new DebuggerBrowsableAttribute(DebuggerBrowsableState.RootHidden);
 
-            // "1" would corespond to DebuggerBrowsableState.Expanded if it was
+            // "1" would correspond to DebuggerBrowsableState.Expanded if it was
             // present.  The current implementation allows this value even though
             // it is not part of the enum.
             new DebuggerBrowsableAttribute((DebuggerBrowsableState)1);

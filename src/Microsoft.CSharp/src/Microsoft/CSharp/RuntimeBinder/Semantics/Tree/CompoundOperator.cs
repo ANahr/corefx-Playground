@@ -1,16 +1,17 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 namespace Microsoft.CSharp.RuntimeBinder.Semantics
 {
-    internal class EXPRMULTIGET : EXPR
+    internal sealed class EXPRMULTIGET : EXPR
     {
-        public EXPRMULTI OptionalMulti;
+        private EXPRMULTI OptionalMulti;
         public EXPRMULTI GetOptionalMulti() { return OptionalMulti; }
         public void SetOptionalMulti(EXPRMULTI value) { OptionalMulti = value; }
     }
 
-    internal class EXPRMULTI : EXPR
+    internal sealed class EXPRMULTI : EXPR
     {
         public EXPR Left;
         public EXPR GetLeft() { return Left; }

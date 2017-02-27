@@ -1,5 +1,6 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 // =+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
 //
@@ -70,8 +71,8 @@ namespace System.Threading.Tasks.Dataflow
         private ActionBlock(Delegate action, ExecutionDataflowBlockOptions dataflowBlockOptions)
         {
             // Validate arguments
-            if (action == null) throw new ArgumentNullException("action");
-            if (dataflowBlockOptions == null) throw new ArgumentNullException("dataflowBlockOptions");
+            if (action == null) throw new ArgumentNullException(nameof(action));
+            if (dataflowBlockOptions == null) throw new ArgumentNullException(nameof(dataflowBlockOptions));
             Contract.Ensures((_spscTarget != null) ^ (_defaultTarget != null), "One and only one of the two targets must be non-null after construction");
             Contract.EndContractBlock();
 
@@ -154,7 +155,7 @@ namespace System.Threading.Tasks.Dataflow
         [SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
         private void ProcessMessageWithTask(Func<TInput, Task> action, KeyValuePair<TInput, long> messageWithId)
         {
-            Contract.Requires(action != null, "action needed for processing");
+            Debug.Assert(action != null, "action needed for processing");
 
             // Run the action to get the task that represents the operation's completion
             Task task = null;
@@ -198,8 +199,8 @@ namespace System.Threading.Tasks.Dataflow
         /// <param name="completed">The completed task.</param>
         private void AsyncCompleteProcessMessageWithTask(Task completed)
         {
-            Contract.Requires(completed != null, "Need completed task for processing");
-            Contract.Requires(completed.IsCompleted, "The task to be processed must be completed by now.");
+            Debug.Assert(completed != null, "Need completed task for processing");
+            Debug.Assert(completed.IsCompleted, "The task to be processed must be completed by now.");
 
             // If the task faulted, store its errors. We must add the exception before declining
             // and signaling completion, as the exception is part of the operation, and the completion conditions
@@ -216,7 +217,7 @@ namespace System.Threading.Tasks.Dataflow
             _defaultTarget.SignalOneAsyncMessageCompleted(boundingCountChange: -1);
         }
 
-        /// <include file='XmlDocs\CommonXmlDocComments.xml' path='CommonXmlDocComments/Blocks/Member[@name="Complete"]/*' />
+        /// <include file='XmlDocs/CommonXmlDocComments.xml' path='CommonXmlDocComments/Blocks/Member[@name="Complete"]/*' />
         public void Complete()
         {
             if (_defaultTarget != null)
@@ -229,10 +230,10 @@ namespace System.Threading.Tasks.Dataflow
             }
         }
 
-        /// <include file='XmlDocs\CommonXmlDocComments.xml' path='CommonXmlDocComments/Blocks/Member[@name="Fault"]/*' />
+        /// <include file='XmlDocs/CommonXmlDocComments.xml' path='CommonXmlDocComments/Blocks/Member[@name="Fault"]/*' />
         void IDataflowBlock.Fault(Exception exception)
         {
-            if (exception == null) throw new ArgumentNullException("exception");
+            if (exception == null) throw new ArgumentNullException(nameof(exception));
             Contract.EndContractBlock();
 
             if (_defaultTarget != null)
@@ -245,7 +246,7 @@ namespace System.Threading.Tasks.Dataflow
             }
         }
 
-        /// <include file='XmlDocs\CommonXmlDocComments.xml' path='CommonXmlDocComments/Blocks/Member[@name="Completion"]/*' />
+        /// <include file='XmlDocs/CommonXmlDocComments.xml' path='CommonXmlDocComments/Blocks/Member[@name="Completion"]/*' />
         public Task Completion
         {
             get { return _defaultTarget != null ? _defaultTarget.Completion : _spscTarget.Completion; }
@@ -278,7 +279,7 @@ namespace System.Threading.Tasks.Dataflow
                 _spscTarget.Post(item);
         }
 
-        /// <include file='XmlDocs\CommonXmlDocComments.xml' path='CommonXmlDocComments/Targets/Member[@name="OfferMessage"]/*' />
+        /// <include file='XmlDocs/CommonXmlDocComments.xml' path='CommonXmlDocComments/Targets/Member[@name="OfferMessage"]/*' />
         DataflowMessageStatus ITargetBlock<TInput>.OfferMessage(DataflowMessageHeader messageHeader, TInput messageValue, ISourceBlock<TInput> source, Boolean consumeToAccept)
         {
             return _defaultTarget != null ?
@@ -286,7 +287,7 @@ namespace System.Threading.Tasks.Dataflow
                 _spscTarget.OfferMessage(messageHeader, messageValue, source, consumeToAccept);
         }
 
-        /// <include file='XmlDocs\CommonXmlDocComments.xml' path='CommonXmlDocComments/Targets/Member[@name="InputCount"]/*' />
+        /// <include file='XmlDocs/CommonXmlDocComments.xml' path='CommonXmlDocComments/Targets/Member[@name="InputCount"]/*' />
         public int InputCount
         {
             get { return _defaultTarget != null ? _defaultTarget.InputCount : _spscTarget.InputCount; }
@@ -298,7 +299,7 @@ namespace System.Threading.Tasks.Dataflow
             get { return _defaultTarget != null ? _defaultTarget.GetDebuggingInformation().InputCount : _spscTarget.InputCount; }
         }
 
-        /// <include file='XmlDocs\CommonXmlDocComments.xml' path='CommonXmlDocComments/Blocks/Member[@name="ToString"]/*' />
+        /// <include file='XmlDocs/CommonXmlDocComments.xml' path='CommonXmlDocComments/Blocks/Member[@name="ToString"]/*' />
         public override string ToString()
         {
             return Common.GetNameForDebugger(this, _defaultTarget != null ? _defaultTarget.DataflowBlockOptions : _spscTarget.DataflowBlockOptions);
@@ -332,7 +333,7 @@ namespace System.Threading.Tasks.Dataflow
             /// <param name="actionBlock">The target being debugged.</param>
             public DebugView(ActionBlock<TInput> actionBlock)
             {
-                Contract.Requires(actionBlock != null, "Need a block with which to construct the debug view.");
+                Debug.Assert(actionBlock != null, "Need a block with which to construct the debug view.");
                 _actionBlock = actionBlock;
                 if (_actionBlock._defaultTarget != null)
                 {

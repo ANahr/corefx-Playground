@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using Xunit;
 
@@ -15,7 +16,7 @@ namespace ManagedTests.DynamicCSharp.Conformance.dynamic.declarations.formalPara
            // <Code>
 public class MyClass
     {
-        static public dynamic Foo(this int x)
+        public static dynamic Foo(this int x)
         {
             return x;
         }
@@ -63,7 +64,7 @@ namespace ManagedTests.DynamicCSharp.Conformance.dynamic.declarations.formalPara
            // <Code>
 public class MyClass
     {
-        static public dynamic Foo(this int x, dynamic d)
+        public static dynamic Foo(this int x, dynamic d)
         {
             return d;
         }
@@ -112,7 +113,7 @@ namespace ManagedTests.DynamicCSharp.Conformance.dynamic.declarations.formalPara
            // <Code>
 public class MyClass
     {
-        static public string Foo(this object x, dynamic d)
+        public static string Foo(this object x, dynamic d)
         {
             return d.ToString();
         }
@@ -748,7 +749,7 @@ namespace ManagedTests.DynamicCSharp.Conformance.dynamic.declarations.formalPara
 
         public static int Status;
 
-        [Fact(Skip = "870811")]
+        
         public static void DynamicCSharpRunTest()
         {
             Assert.Equal(0, MainMethod());
@@ -789,7 +790,7 @@ namespace ManagedTests.DynamicCSharp.Conformance.dynamic.declarations.formalPara
 
         public static int Status;
 
-        [Fact(Skip = "870811")]
+        
         public static void DynamicCSharpRunTest()
         {
             Assert.Equal(0, MainMethod());

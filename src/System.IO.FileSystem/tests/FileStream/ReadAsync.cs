@@ -1,5 +1,6 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.IO;
@@ -8,7 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace System.IO.FileSystem.Tests
+namespace System.IO.Tests
 {
     public class FileStream_ReadAsync : FileSystemTest
     {
@@ -225,41 +226,29 @@ namespace System.IO.FileSystem.Tests
         }
 
         [Fact]
-        [ActiveIssue("Buffering needs to be fixed")]
         public async Task ReadAsyncBufferedCompletesSynchronously()
         {
-            // It doesn't make sense to spin up a background thread just to do a memcpy.
             string fileName = GetTestFilePath();
-            using (FileStream fs = new FileStream(fileName, FileMode.Create))
+
+            using (var fs = new FileStream(fileName, FileMode.Create))
             {
                 fs.Write(TestBuffer, 0, TestBuffer.Length);
                 fs.Write(TestBuffer, 0, TestBuffer.Length);
             }
 
-            // This isn't working now for useAsync:true since we always have a usercallback 
-            // that get's run on the threadpool (see Win32FileStream.EndReadTask)
-
-            // This isn't working now for useAsync:false since we always call
-            // Stream.ReadAsync that queues Read on a background thread
-            foreach (bool useAsync in new[] { true, false })
+            using (var fs = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, TestBuffer.Length * 2, useAsync: true))
             {
-                using (FileStream fs = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, TestBuffer.Length * 2, useAsync))
-                {
-                    byte[] buffer = new byte[TestBuffer.Length];
+                byte[] buffer = new byte[TestBuffer.Length];
 
-                    // Existing issue: FileStreamAsyncResult doesn't set CompletedSynchronously correctly.
+                // prime the internal buffer
+                Assert.Equal(TestBuffer.Length, await fs.ReadAsync(buffer, 0, buffer.Length));
+                Assert.Equal(TestBuffer, buffer);
 
-                    // prime the internal buffer
-                    Assert.Equal(TestBuffer.Length, await fs.ReadAsync(buffer, 0, buffer.Length));
-                    Assert.Equal(TestBuffer, buffer);
+                Array.Clear(buffer, 0, buffer.Length);
 
-                    Array.Clear(buffer, 0, buffer.Length);
-
-                    // read should now complete synchronously since it is serviced by the read buffer filled in the first request
-                    Assert.Equal(TestBuffer.Length,
-                        FSAssert.CompletesSynchronously(fs.ReadAsync(buffer, 0, buffer.Length)));
-                    Assert.Equal(TestBuffer, buffer);
-                }
+                // read should now complete synchronously since it is serviced by the read buffer filled in the first request
+                Assert.Equal(TestBuffer.Length, FSAssert.CompletesSynchronously(fs.ReadAsync(buffer, 0, buffer.Length)));
+                Assert.Equal(TestBuffer, buffer);
             }
         }
 
@@ -316,7 +305,7 @@ namespace System.IO.FileSystem.Tests
                 try
                 {
                     await readTask;
-                    // we may not have cancelled before the task completed.
+                    // we may not have canceled before the task completed.
                 }
                 catch(OperationCanceledException oce)
                 {
@@ -324,6 +313,81 @@ namespace System.IO.FileSystem.Tests
                     // but since cancellation is a race condition we accept either outcome
                     Assert.Equal(cts.Token, oce.CancellationToken);
                 }
+            }
+        }
+
+        [Fact, OuterLoop]
+        public async Task ReadAsyncMiniStress()
+        {
+            TimeSpan testRunTime = TimeSpan.FromSeconds(10);
+            const int MaximumReadSize = 16 * 1024;
+            const int NormalReadSize = 4 * 1024;
+
+            Random rand = new Random();
+            DateTime testStartTime = DateTime.UtcNow;
+
+            // Generate file data
+            byte[] readableFileContents = new byte[MaximumReadSize * 16];
+            rand.NextBytes(readableFileContents);
+
+            // Create and fill file
+            string readableFilePath = GetTestFilePath();
+            using (var stream = new FileStream(readableFilePath, FileMode.CreateNew, FileAccess.Write))
+            {
+                await stream.WriteAsync(readableFileContents, 0, readableFileContents.Length);
+            }
+
+            using (var stream = new FileStream(readableFilePath, FileMode.Open, FileAccess.Read))
+            {
+                // Create a new token that expires between 100-1000ms
+                CancellationTokenSource tokenSource = new CancellationTokenSource();
+                tokenSource.CancelAfter(rand.Next(100, 1000));
+
+                int currentPosition = 0;
+                byte[] buffer = new byte[MaximumReadSize];
+                do
+                {
+                    try
+                    {
+                        // 20%: random read size
+                        int bytesToRead = (rand.NextDouble() < 0.2 ? rand.Next(16, MaximumReadSize) : NormalReadSize);
+
+                        int bytesRead;
+                        if (rand.NextDouble() < 0.1)
+                        {
+                            // 10%: Sync read
+                            bytesRead = stream.Read(buffer, 0, bytesToRead);
+                        }
+                        else
+                        {
+                            // 90%: Async read
+                            bytesRead = await stream.ReadAsync(buffer, 0, bytesToRead, tokenSource.Token);
+                        }
+
+                        // 10%: Verify data (burns a lot of CPU time)
+                        if (rand.NextDouble() < 0.1)
+                        {
+                            // Validate data read
+                            Assert.True(bytesRead + currentPosition <= readableFileContents.Length, "Too many bytes read");
+                            Assert.Equal(readableFileContents.Skip(currentPosition).Take(bytesRead), buffer.Take(bytesRead));
+                        }
+
+                        // Advance position and reset if we are at the end
+                        currentPosition += bytesRead;
+                        if (currentPosition >= readableFileContents.Length)
+                        {
+                            currentPosition = 0;
+                            stream.Seek(0, SeekOrigin.Begin);
+                        }
+                    }
+                    catch (TaskCanceledException)
+                    {
+                        // Once the token has expired, generate a new one
+                        Assert.True(tokenSource.Token.IsCancellationRequested, "Received cancellation exception before token expired");
+                        tokenSource = new CancellationTokenSource();
+                        tokenSource.CancelAfter(rand.Next(100, 1000));
+                    }
+                } while (DateTime.UtcNow - testStartTime <= testRunTime);
             }
         }
     }

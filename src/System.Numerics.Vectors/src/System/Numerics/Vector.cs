@@ -1,9 +1,9 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
-// This file is auto-generated, do not make permanent modifications.
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using System.Diagnostics.Contracts;
 using System.Globalization;
+using System.Numerics.Hashing;
 using System.Runtime.CompilerServices;
 using System.Text;
 
@@ -53,17 +53,10 @@ namespace System.Numerics
         {
             get
             {
-                if (Vector.IsHardwareAccelerated)
-                {
-                    throw new NotSupportedException(SR.Reflection_MethodNotSupported);
-                }
-                else
-                {
-                    return count;
-                }
+                return s_count;
             }
         }
-        private static int count = InitializeCount();
+        private static readonly int s_count = InitializeCount();
 
         /// <summary>
         /// Returns a vector containing all zeroes.
@@ -84,55 +77,67 @@ namespace System.Numerics
         #endregion Static Members
 
         #region Static Initialization
-        private static int InitializeCount()
+        private struct VectorSizeHelper
         {
-            Contract.Requires(
-                Vector.IsHardwareAccelerated == false,
-                "InitializeCount cannot be invoked when running under hardware acceleration");
+            internal Vector<T> _placeholder;
+            internal byte _byte;
+        }
+
+		// Calculates the size of this struct in bytes, by computing the offset of a field in a structure
+        private static unsafe int InitializeCount()
+        {
+            VectorSizeHelper vsh;
+            byte* vectorBase = &vsh._placeholder.register.byte_0;
+            byte* byteBase = &vsh._byte;
+            int vectorSizeInBytes = (int)(byteBase - vectorBase);
+
+            int typeSizeInBytes = -1;
             if (typeof(T) == typeof(Byte))
             {
-                return 16;
+                typeSizeInBytes = sizeof(Byte);
             }
             else if (typeof(T) == typeof(SByte))
             {
-                return 16;
+                typeSizeInBytes = sizeof(SByte);
             }
             else if (typeof(T) == typeof(UInt16))
             {
-                return 8;
+                typeSizeInBytes = sizeof(UInt16);
             }
             else if (typeof(T) == typeof(Int16))
             {
-                return 8;
+                typeSizeInBytes = sizeof(Int16);
             }
             else if (typeof(T) == typeof(UInt32))
             {
-                return 4;
+                typeSizeInBytes = sizeof(UInt32);
             }
             else if (typeof(T) == typeof(Int32))
             {
-                return 4;
+                typeSizeInBytes = sizeof(Int32);
             }
             else if (typeof(T) == typeof(UInt64))
             {
-                return 2;
+                typeSizeInBytes = sizeof(UInt64);
             }
             else if (typeof(T) == typeof(Int64))
             {
-                return 2;
+                typeSizeInBytes = sizeof(Int64);
             }
             else if (typeof(T) == typeof(Single))
             {
-                return 4;
+                typeSizeInBytes = sizeof(Single);
             }
             else if (typeof(T) == typeof(Double))
             {
-                return 2;
+                typeSizeInBytes = sizeof(Double);
             }
             else
             {
                 throw new NotSupportedException(SR.Arg_TypeNotSupported);
             }
+
+            return vectorSizeInBytes / typeSizeInBytes;
         }
         #endregion Static Initialization
 
@@ -363,7 +368,8 @@ namespace System.Numerics
         {
             if (values == null)
             {
-                throw new ArgumentNullException("values");
+                // Match the JIT's exception type here. For perf, a NullReference is thrown instead of an ArgumentNull.
+                throw new NullReferenceException(SR.Arg_NullArgumentNullRef);
             }
             if (index < 0 || (values.Length - index) < Count)
             {
@@ -772,11 +778,12 @@ namespace System.Numerics
         {
             if (destination == null)
             {
-                throw new ArgumentNullException("values");
+                // Match the JIT's exception type here. For perf, a NullReference is thrown instead of an ArgumentNull.
+                throw new NullReferenceException(SR.Arg_NullArgumentNullRef);
             }
             if (startIndex < 0 || startIndex >= destination.Length)
             {
-                throw new ArgumentOutOfRangeException(SR.Format(SR.Arg_ArgumentOutOfRangeException, startIndex));
+                throw new ArgumentOutOfRangeException(nameof(startIndex), SR.Format(SR.Arg_ArgumentOutOfRangeException, startIndex));
             }
             if ((destination.Length - startIndex) < Count)
             {
@@ -1289,7 +1296,7 @@ namespace System.Numerics
                 {
                     for (int g = 0; g < Count; g++)
                     {
-                        hash = HashCodeHelper.CombineHashCodes(hash, ((Byte)(object)this[g]).GetHashCode());
+                        hash = HashHelpers.Combine(hash, ((Byte)(object)this[g]).GetHashCode());
                     }
                     return hash;
                 }
@@ -1297,7 +1304,7 @@ namespace System.Numerics
                 {
                     for (int g = 0; g < Count; g++)
                     {
-                        hash = HashCodeHelper.CombineHashCodes(hash, ((SByte)(object)this[g]).GetHashCode());
+                        hash = HashHelpers.Combine(hash, ((SByte)(object)this[g]).GetHashCode());
                     }
                     return hash;
                 }
@@ -1305,7 +1312,7 @@ namespace System.Numerics
                 {
                     for (int g = 0; g < Count; g++)
                     {
-                        hash = HashCodeHelper.CombineHashCodes(hash, ((UInt16)(object)this[g]).GetHashCode());
+                        hash = HashHelpers.Combine(hash, ((UInt16)(object)this[g]).GetHashCode());
                     }
                     return hash;
                 }
@@ -1313,7 +1320,7 @@ namespace System.Numerics
                 {
                     for (int g = 0; g < Count; g++)
                     {
-                        hash = HashCodeHelper.CombineHashCodes(hash, ((Int16)(object)this[g]).GetHashCode());
+                        hash = HashHelpers.Combine(hash, ((Int16)(object)this[g]).GetHashCode());
                     }
                     return hash;
                 }
@@ -1321,7 +1328,7 @@ namespace System.Numerics
                 {
                     for (int g = 0; g < Count; g++)
                     {
-                        hash = HashCodeHelper.CombineHashCodes(hash, ((UInt32)(object)this[g]).GetHashCode());
+                        hash = HashHelpers.Combine(hash, ((UInt32)(object)this[g]).GetHashCode());
                     }
                     return hash;
                 }
@@ -1329,7 +1336,7 @@ namespace System.Numerics
                 {
                     for (int g = 0; g < Count; g++)
                     {
-                        hash = HashCodeHelper.CombineHashCodes(hash, ((Int32)(object)this[g]).GetHashCode());
+                        hash = HashHelpers.Combine(hash, ((Int32)(object)this[g]).GetHashCode());
                     }
                     return hash;
                 }
@@ -1337,7 +1344,7 @@ namespace System.Numerics
                 {
                     for (int g = 0; g < Count; g++)
                     {
-                        hash = HashCodeHelper.CombineHashCodes(hash, ((UInt64)(object)this[g]).GetHashCode());
+                        hash = HashHelpers.Combine(hash, ((UInt64)(object)this[g]).GetHashCode());
                     }
                     return hash;
                 }
@@ -1345,7 +1352,7 @@ namespace System.Numerics
                 {
                     for (int g = 0; g < Count; g++)
                     {
-                        hash = HashCodeHelper.CombineHashCodes(hash, ((Int64)(object)this[g]).GetHashCode());
+                        hash = HashHelpers.Combine(hash, ((Int64)(object)this[g]).GetHashCode());
                     }
                     return hash;
                 }
@@ -1353,7 +1360,7 @@ namespace System.Numerics
                 {
                     for (int g = 0; g < Count; g++)
                     {
-                        hash = HashCodeHelper.CombineHashCodes(hash, ((Single)(object)this[g]).GetHashCode());
+                        hash = HashHelpers.Combine(hash, ((Single)(object)this[g]).GetHashCode());
                     }
                     return hash;
                 }
@@ -1361,7 +1368,7 @@ namespace System.Numerics
                 {
                     for (int g = 0; g < Count; g++)
                     {
-                        hash = HashCodeHelper.CombineHashCodes(hash, ((Double)(object)this[g]).GetHashCode());
+                        hash = HashHelpers.Combine(hash, ((Double)(object)this[g]).GetHashCode());
                     }
                     return hash;
                 }
@@ -1374,108 +1381,108 @@ namespace System.Numerics
             {
                 if (typeof(T) == typeof(Byte))
                 {
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.byte_0.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.byte_1.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.byte_2.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.byte_3.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.byte_4.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.byte_5.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.byte_6.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.byte_7.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.byte_8.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.byte_9.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.byte_10.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.byte_11.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.byte_12.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.byte_13.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.byte_14.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.byte_15.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.byte_0.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.byte_1.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.byte_2.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.byte_3.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.byte_4.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.byte_5.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.byte_6.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.byte_7.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.byte_8.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.byte_9.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.byte_10.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.byte_11.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.byte_12.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.byte_13.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.byte_14.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.byte_15.GetHashCode());
                     return hash;
                 }
                 else if (typeof(T) == typeof(SByte))
                 {
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.sbyte_0.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.sbyte_1.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.sbyte_2.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.sbyte_3.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.sbyte_4.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.sbyte_5.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.sbyte_6.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.sbyte_7.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.sbyte_8.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.sbyte_9.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.sbyte_10.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.sbyte_11.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.sbyte_12.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.sbyte_13.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.sbyte_14.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.sbyte_15.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.sbyte_0.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.sbyte_1.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.sbyte_2.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.sbyte_3.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.sbyte_4.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.sbyte_5.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.sbyte_6.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.sbyte_7.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.sbyte_8.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.sbyte_9.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.sbyte_10.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.sbyte_11.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.sbyte_12.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.sbyte_13.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.sbyte_14.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.sbyte_15.GetHashCode());
                     return hash;
                 }
                 else if (typeof(T) == typeof(UInt16))
                 {
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.uint16_0.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.uint16_1.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.uint16_2.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.uint16_3.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.uint16_4.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.uint16_5.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.uint16_6.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.uint16_7.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.uint16_0.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.uint16_1.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.uint16_2.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.uint16_3.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.uint16_4.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.uint16_5.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.uint16_6.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.uint16_7.GetHashCode());
                     return hash;
                 }
                 else if (typeof(T) == typeof(Int16))
                 {
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.int16_0.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.int16_1.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.int16_2.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.int16_3.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.int16_4.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.int16_5.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.int16_6.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.int16_7.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.int16_0.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.int16_1.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.int16_2.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.int16_3.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.int16_4.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.int16_5.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.int16_6.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.int16_7.GetHashCode());
                     return hash;
                 }
                 else if (typeof(T) == typeof(UInt32))
                 {
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.uint32_0.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.uint32_1.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.uint32_2.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.uint32_3.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.uint32_0.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.uint32_1.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.uint32_2.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.uint32_3.GetHashCode());
                     return hash;
                 }
                 else if (typeof(T) == typeof(Int32))
                 {
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.int32_0.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.int32_1.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.int32_2.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.int32_3.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.int32_0.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.int32_1.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.int32_2.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.int32_3.GetHashCode());
                     return hash;
                 }
                 else if (typeof(T) == typeof(UInt64))
                 {
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.uint64_0.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.uint64_1.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.uint64_0.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.uint64_1.GetHashCode());
                     return hash;
                 }
                 else if (typeof(T) == typeof(Int64))
                 {
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.int64_0.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.int64_1.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.int64_0.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.int64_1.GetHashCode());
                     return hash;
                 }
                 else if (typeof(T) == typeof(Single))
                 {
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.single_0.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.single_1.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.single_2.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.single_3.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.single_0.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.single_1.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.single_2.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.single_3.GetHashCode());
                     return hash;
                 }
                 else if (typeof(T) == typeof(Double))
                 {
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.double_0.GetHashCode());
-                    hash = HashCodeHelper.CombineHashCodes(hash, this.register.double_1.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.double_0.GetHashCode());
+                    hash = HashHelpers.Combine(hash, this.register.double_1.GetHashCode());
                     return hash;
                 }
                 else
@@ -2745,11 +2752,11 @@ namespace System.Numerics
         }
 
         /// <summary>
-        /// Returns a boolean indicating whether any single pair of elements in the given vectors are equal.
+        /// Returns a boolean indicating whether any single pair of elements in the given vectors are not equal.
         /// </summary>
         /// <param name="left">The first vector to compare.</param>
         /// <param name="right">The second vector to compare.</param>
-        /// <returns>True if any element pairs are equal; False if no element pairs are equal.</returns>
+        /// <returns>True if left and right are not equal; False otherwise.</returns>
         [MethodImplAttribute(MethodImplOptions.AggressiveInlining)]
         public static bool operator !=(Vector<T> left, Vector<T> right)
         {
@@ -4274,7 +4281,7 @@ namespace System.Numerics
                     Byte* dataPtr = stackalloc Byte[Count];
                     for (int g = 0; g < Count; g++)
                     {
-                        dataPtr[g] = (Byte)Math.Sqrt((Byte)(object)value[g]);
+                        dataPtr[g] = unchecked((Byte)Math.Sqrt((Byte)(object)value[g]));
                     }
                     return new Vector<T>(dataPtr);
                 }
@@ -4283,7 +4290,7 @@ namespace System.Numerics
                     SByte* dataPtr = stackalloc SByte[Count];
                     for (int g = 0; g < Count; g++)
                     {
-                        dataPtr[g] = (SByte)Math.Sqrt((SByte)(object)value[g]);
+                        dataPtr[g] = unchecked((SByte)Math.Sqrt((SByte)(object)value[g]));
                     }
                     return new Vector<T>(dataPtr);
                 }
@@ -4292,7 +4299,7 @@ namespace System.Numerics
                     UInt16* dataPtr = stackalloc UInt16[Count];
                     for (int g = 0; g < Count; g++)
                     {
-                        dataPtr[g] = (UInt16)Math.Sqrt((UInt16)(object)value[g]);
+                        dataPtr[g] = unchecked((UInt16)Math.Sqrt((UInt16)(object)value[g]));
                     }
                     return new Vector<T>(dataPtr);
                 }
@@ -4301,7 +4308,7 @@ namespace System.Numerics
                     Int16* dataPtr = stackalloc Int16[Count];
                     for (int g = 0; g < Count; g++)
                     {
-                        dataPtr[g] = (Int16)Math.Sqrt((Int16)(object)value[g]);
+                        dataPtr[g] = unchecked((Int16)Math.Sqrt((Int16)(object)value[g]));
                     }
                     return new Vector<T>(dataPtr);
                 }
@@ -4310,7 +4317,7 @@ namespace System.Numerics
                     UInt32* dataPtr = stackalloc UInt32[Count];
                     for (int g = 0; g < Count; g++)
                     {
-                        dataPtr[g] = (UInt32)Math.Sqrt((UInt32)(object)value[g]);
+                        dataPtr[g] = unchecked((UInt32)Math.Sqrt((UInt32)(object)value[g]));
                     }
                     return new Vector<T>(dataPtr);
                 }
@@ -4319,7 +4326,7 @@ namespace System.Numerics
                     Int32* dataPtr = stackalloc Int32[Count];
                     for (int g = 0; g < Count; g++)
                     {
-                        dataPtr[g] = (Int32)Math.Sqrt((Int32)(object)value[g]);
+                        dataPtr[g] = unchecked((Int32)Math.Sqrt((Int32)(object)value[g]));
                     }
                     return new Vector<T>(dataPtr);
                 }
@@ -4328,7 +4335,7 @@ namespace System.Numerics
                     UInt64* dataPtr = stackalloc UInt64[Count];
                     for (int g = 0; g < Count; g++)
                     {
-                        dataPtr[g] = (UInt64)Math.Sqrt((UInt64)(object)value[g]);
+                        dataPtr[g] = unchecked((UInt64)Math.Sqrt((UInt64)(object)value[g]));
                     }
                     return new Vector<T>(dataPtr);
                 }
@@ -4337,7 +4344,7 @@ namespace System.Numerics
                     Int64* dataPtr = stackalloc Int64[Count];
                     for (int g = 0; g < Count; g++)
                     {
-                        dataPtr[g] = (Int64)Math.Sqrt((Int64)(object)value[g]);
+                        dataPtr[g] = unchecked((Int64)Math.Sqrt((Int64)(object)value[g]));
                     }
                     return new Vector<T>(dataPtr);
                 }
@@ -4346,7 +4353,7 @@ namespace System.Numerics
                     Single* dataPtr = stackalloc Single[Count];
                     for (int g = 0; g < Count; g++)
                     {
-                        dataPtr[g] = (Single)Math.Sqrt((Single)(object)value[g]);
+                        dataPtr[g] = unchecked((Single)Math.Sqrt((Single)(object)value[g]));
                     }
                     return new Vector<T>(dataPtr);
                 }
@@ -4355,7 +4362,7 @@ namespace System.Numerics
                     Double* dataPtr = stackalloc Double[Count];
                     for (int g = 0; g < Count; g++)
                     {
-                        dataPtr[g] = (Double)Math.Sqrt((Double)(object)value[g]);
+                        dataPtr[g] = unchecked((Double)Math.Sqrt((Double)(object)value[g]));
                     }
                     return new Vector<T>(dataPtr);
                 }
@@ -4633,43 +4640,43 @@ namespace System.Numerics
         {
             if (typeof(T) == typeof(Byte))
             {
-                return (T)(object)(Byte)((Byte)(object)left + (Byte)(object)right);
+                return (T)(object)unchecked((Byte)((Byte)(object)left + (Byte)(object)right));
             }
             else if (typeof(T) == typeof(SByte))
             {
-                return (T)(object)(SByte)((SByte)(object)left + (SByte)(object)right);
+                return (T)(object)unchecked((SByte)((SByte)(object)left + (SByte)(object)right));
             }
             else if (typeof(T) == typeof(UInt16))
             {
-                return (T)(object)(UInt16)((UInt16)(object)left + (UInt16)(object)right);
+                return (T)(object)unchecked((UInt16)((UInt16)(object)left + (UInt16)(object)right));
             }
             else if (typeof(T) == typeof(Int16))
             {
-                return (T)(object)(Int16)((Int16)(object)left + (Int16)(object)right);
+                return (T)(object)unchecked((Int16)((Int16)(object)left + (Int16)(object)right));
             }
             else if (typeof(T) == typeof(UInt32))
             {
-                return (T)(object)(UInt32)((UInt32)(object)left + (UInt32)(object)right);
+                return (T)(object)unchecked((UInt32)((UInt32)(object)left + (UInt32)(object)right));
             }
             else if (typeof(T) == typeof(Int32))
             {
-                return (T)(object)(Int32)((Int32)(object)left + (Int32)(object)right);
+                return (T)(object)unchecked((Int32)((Int32)(object)left + (Int32)(object)right));
             }
             else if (typeof(T) == typeof(UInt64))
             {
-                return (T)(object)(UInt64)((UInt64)(object)left + (UInt64)(object)right);
+                return (T)(object)unchecked((UInt64)((UInt64)(object)left + (UInt64)(object)right));
             }
             else if (typeof(T) == typeof(Int64))
             {
-                return (T)(object)(Int64)((Int64)(object)left + (Int64)(object)right);
+                return (T)(object)unchecked((Int64)((Int64)(object)left + (Int64)(object)right));
             }
             else if (typeof(T) == typeof(Single))
             {
-                return (T)(object)(Single)((Single)(object)left + (Single)(object)right);
+                return (T)(object)unchecked((Single)((Single)(object)left + (Single)(object)right));
             }
             else if (typeof(T) == typeof(Double))
             {
-                return (T)(object)(Double)((Double)(object)left + (Double)(object)right);
+                return (T)(object)unchecked((Double)((Double)(object)left + (Double)(object)right));
             }
             else
             {
@@ -4731,43 +4738,43 @@ namespace System.Numerics
         {
             if (typeof(T) == typeof(Byte))
             {
-                return (T)(object)(Byte)((Byte)(object)left * (Byte)(object)right);
+                return (T)(object)unchecked((Byte)((Byte)(object)left * (Byte)(object)right));
             }
             else if (typeof(T) == typeof(SByte))
             {
-                return (T)(object)(SByte)((SByte)(object)left * (SByte)(object)right);
+                return (T)(object)unchecked((SByte)((SByte)(object)left * (SByte)(object)right));
             }
             else if (typeof(T) == typeof(UInt16))
             {
-                return (T)(object)(UInt16)((UInt16)(object)left * (UInt16)(object)right);
+                return (T)(object)unchecked((UInt16)((UInt16)(object)left * (UInt16)(object)right));
             }
             else if (typeof(T) == typeof(Int16))
             {
-                return (T)(object)(Int16)((Int16)(object)left * (Int16)(object)right);
+                return (T)(object)unchecked((Int16)((Int16)(object)left * (Int16)(object)right));
             }
             else if (typeof(T) == typeof(UInt32))
             {
-                return (T)(object)(UInt32)((UInt32)(object)left * (UInt32)(object)right);
+                return (T)(object)unchecked((UInt32)((UInt32)(object)left * (UInt32)(object)right));
             }
             else if (typeof(T) == typeof(Int32))
             {
-                return (T)(object)(Int32)((Int32)(object)left * (Int32)(object)right);
+                return (T)(object)unchecked((Int32)((Int32)(object)left * (Int32)(object)right));
             }
             else if (typeof(T) == typeof(UInt64))
             {
-                return (T)(object)(UInt64)((UInt64)(object)left * (UInt64)(object)right);
+                return (T)(object)unchecked((UInt64)((UInt64)(object)left * (UInt64)(object)right));
             }
             else if (typeof(T) == typeof(Int64))
             {
-                return (T)(object)(Int64)((Int64)(object)left * (Int64)(object)right);
+                return (T)(object)unchecked((Int64)((Int64)(object)left * (Int64)(object)right));
             }
             else if (typeof(T) == typeof(Single))
             {
-                return (T)(object)(Single)((Single)(object)left * (Single)(object)right);
+                return (T)(object)unchecked((Single)((Single)(object)left * (Single)(object)right));
             }
             else if (typeof(T) == typeof(Double))
             {
-                return (T)(object)(Double)((Double)(object)left * (Double)(object)right);
+                return (T)(object)unchecked((Double)((Double)(object)left * (Double)(object)right));
             }
             else
             {

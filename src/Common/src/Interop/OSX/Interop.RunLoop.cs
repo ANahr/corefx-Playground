@@ -1,10 +1,15 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Runtime.InteropServices;
 
+using Microsoft.Win32.SafeHandles;
+
 using CFRunLoopRef = System.IntPtr;
+using CFRunLoopSourceRef = System.IntPtr;
+using CFStringRef = System.IntPtr;
 
 internal static partial class Interop
 {
@@ -16,7 +21,7 @@ internal static partial class Interop
         /// <remarks>
         /// For more information, see the Apple documentation: https://developer.apple.com/library/mac/documentation/CoreFoundation/Reference/CFRunLoopRef/index.html
         /// </remarks>
-        internal static IntPtr kCFRunLoopDefaultMode = Interop.CoreFoundation.CFStringCreateWithCString("kCFRunLoopDefaultMode");
+        internal static SafeCreateHandle kCFRunLoopDefaultMode = Interop.CoreFoundation.CFStringCreateWithCString("kCFRunLoopDefaultMode");
 
         /// <summary>
         /// Starts the current thread's RunLoop. If the RunLoop is already running, creates a new, nested, RunLoop in the same stack.
@@ -38,5 +43,34 @@ internal static partial class Interop
         /// <returns>Returns a pointer to a CFRunLoop on success; otherwise, returns IntPtr.Zero</returns>
         [DllImport(Interop.Libraries.CoreFoundationLibrary)]
         internal static extern CFRunLoopRef CFRunLoopGetCurrent();
+
+        /// <summary>
+        /// Adds a CFRunLoopSource object to a run loop mode.
+        /// </summary>
+        /// <param name="rl">The run loop to modify.</param>
+        /// <param name="rl">The run loop source to add. The source is retained by the run loop.</param>
+        /// <param name="rl">The run loop mode to which to add source.</param>
+        [DllImport(Interop.Libraries.CoreFoundationLibrary)]
+        internal static extern void CFRunLoopAddSource(CFRunLoopRef rl, CFRunLoopSourceRef source, CFStringRef mode);
+
+        /// <summary>
+        /// Removes a CFRunLoopSource object from a run loop mode.
+        /// </summary>
+        /// <param name="rl">The run loop to modify.</param>
+        /// <param name="rl">The run loop source to remove.</param>
+        /// <param name="rl">The run loop mode of rl from which to remove source.</param>
+        [DllImport(Interop.Libraries.CoreFoundationLibrary)]
+        internal static extern void CFRunLoopRemoveSource(CFRunLoopRef rl, CFRunLoopSourceRef source, CFStringRef mode);
+        
+        /// <summary>
+        /// Returns a bool that indicates whether the run loop is waiting for an event.
+        /// </summary>
+        /// <param name="rl">The run loop to examine.</param>
+        /// <returns>true if rl has no events to process and is blocking,
+        /// waiting for a source or timer to become ready to fire;
+        /// false if rl either is not running or is currently processing
+        /// a source, timer, or observer.</returns>
+        [DllImport(Interop.Libraries.CoreFoundationLibrary)]
+        internal static extern bool CFRunLoopIsWaiting(CFRunLoopRef rl);
     }
 }

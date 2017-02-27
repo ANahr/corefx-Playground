@@ -1,5 +1,6 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -8,7 +9,7 @@ using Microsoft.CSharp.RuntimeBinder.Syntax;
 
 namespace Microsoft.CSharp.RuntimeBinder.Semantics
 {
-    internal partial class ExpressionBinder
+    internal sealed partial class ExpressionBinder
     {
         ////////////////////////////////////////////////////////////////////////////////
         // This table is used to implement the last set of 'better' conversion rules
@@ -16,7 +17,7 @@ namespace Microsoft.CSharp.RuntimeBinder.Semantics
         // Use all the simple types plus 1 more for Object
         // See CLR section 7.4.1.3
 
-        static private readonly byte[][] s_betterConversionTable =
+        private static readonly byte[][] s_betterConversionTable =
         {
             //          BYTE    SHORT   INT     LONG    FLOAT   DOUBLE  DECIMAL CHAR    BOOL    SBYTE   USHORT  UINT    ULONG   IPTR     UIPTR    OBJECT
             new byte[] /* BYTE*/   {0,     0,      0,      0,      0,      0,      0,      0,      0,      2,      0,      0,      0,      0,       0,       0},
@@ -37,7 +38,7 @@ namespace Microsoft.CSharp.RuntimeBinder.Semantics
             new byte[] /* OBJECT*/ {0,     0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,      0,       0,       0}
         };
 
-        protected BetterType WhichMethodIsBetterTieBreaker(
+        private BetterType WhichMethodIsBetterTieBreaker(
             CandidateFunctionMember node1,
             CandidateFunctionMember node2,
             CType pTypeThrough,
@@ -120,9 +121,9 @@ namespace Microsoft.CSharp.RuntimeBinder.Semantics
         //    Foo(string y = "", string x="", long l = 5)
         // and the call site:
         //    Foo(y:"a")
-        // After rearanging the parameter types we will have:
+        // After rearranging the parameter types we will have:
         //   (string, int, long) and (string, string, long)
-        // By rearanging the arguments as such we make sure that any specified named arguments appear in the same position for both
+        // By rearranging the arguments as such we make sure that any specified named arguments appear in the same position for both
         // methods and we also maintain the relative order of the other parameters (the type long appears after int in the above example)
 
         private TypeArray RearrangeNamedArguments(TypeArray pta, MethPropWithInst mpwi,
@@ -202,7 +203,7 @@ namespace Microsoft.CSharp.RuntimeBinder.Semantics
         //
         // Returns Left if m1 is better, Right if m2 is better, or Neither/Same
 
-        protected BetterType WhichMethodIsBetter(
+        private BetterType WhichMethodIsBetter(
             CandidateFunctionMember node1,
             CandidateFunctionMember node2,
             CType pTypeThrough,
@@ -236,8 +237,8 @@ namespace Microsoft.CSharp.RuntimeBinder.Semantics
             BetterType betterMethod = BetterType.Neither;
             CType type1 = pTypeThrough != null ? pTypeThrough : mpwi1.GetType();
             CType type2 = pTypeThrough != null ? pTypeThrough : mpwi2.GetType();
-            MethodOrPropertySymbol methProp1 = ExpressionBinder.GroupToArgsBinder.FindMostDerivedMethod(GetSymbolLoader(), mpwi1.MethProp(), type1);
-            MethodOrPropertySymbol methProp2 = ExpressionBinder.GroupToArgsBinder.FindMostDerivedMethod(GetSymbolLoader(), mpwi2.MethProp(), type2);
+            MethodOrPropertySymbol methProp1 = GroupToArgsBinder.FindMostDerivedMethod(GetSymbolLoader(), mpwi1.MethProp(), type1);
+            MethodOrPropertySymbol methProp2 = GroupToArgsBinder.FindMostDerivedMethod(GetSymbolLoader(), mpwi2.MethProp(), type2);
             List<Name> names1 = methProp1.ParameterNames;
             List<Name> names2 = methProp2.ParameterNames;
 
@@ -317,7 +318,7 @@ namespace Microsoft.CSharp.RuntimeBinder.Semantics
             return betterMethod;
         }
 
-        protected BetterType WhichConversionIsBetter(EXPR arg, CType argType,
+        private BetterType WhichConversionIsBetter(EXPR arg, CType argType,
             CType p1, CType p2)
         {
             Debug.Assert(argType != null);
@@ -351,7 +352,7 @@ namespace Microsoft.CSharp.RuntimeBinder.Semantics
             return WhichConversionIsBetter(argType, p1, p2);
         }
 
-        public BetterType WhichConversionIsBetter(CType argType,
+        private BetterType WhichConversionIsBetter(CType argType,
             CType p1, CType p2)
         {
             // 7.4.2.4 Better conversion from type
@@ -418,8 +419,7 @@ namespace Microsoft.CSharp.RuntimeBinder.Semantics
         ////////////////////////////////////////////////////////////////////////////////
         // Determine best method for overload resolution. Returns null if no best 
         // method, in which case two tying methods are returned for error reporting.
-
-        protected CandidateFunctionMember FindBestMethod(
+        private CandidateFunctionMember FindBestMethod(
             List<CandidateFunctionMember> list,
             CType pTypeThrough,
             ArgInfos args,
@@ -439,7 +439,7 @@ namespace Microsoft.CSharp.RuntimeBinder.Semantics
             If second is better, make the contender the candidate and make the item following
                 contender into the new contender, if there is none, goto phase 2
             If neither, make contender+1 into candidate and contender+2 into contender, if possible,
-                otherwise, if contender was last, return null, otherwise if new condidate is last,
+                otherwise, if contender was last, return null, otherwise if new candidate is last,
                 goto phase 2
             Phase 2: compare all items before candidate to candidate
                 If candidate always better, return it, otherwise return null

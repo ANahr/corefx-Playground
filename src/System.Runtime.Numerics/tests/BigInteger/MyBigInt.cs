@@ -1,13 +1,11 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Numerics;
-using Xunit;
 
-namespace Tools
+namespace System.Numerics.Tests
 {
     public static class MyBigIntImp
     {
@@ -34,7 +32,7 @@ namespace Tools
                 case "u~":
                     return new BigInteger(Not(bytes1).ToArray());
                 case "uLog10":
-                    factor = (int)BigInteger.Log(num1, 10);
+                    factor = unchecked((int)BigInteger.Log(num1, 10));
                     if (factor > 100)
                     {
                         for (int i = 0; i < factor - 100; i++)
@@ -52,7 +50,7 @@ namespace Tools
                     }
                     return ApproximateBigInteger(result);
                 case "uLog":
-                    factor = (int)BigInteger.Log(num1, 10);
+                    factor = unchecked((int)BigInteger.Log(num1, 10));
                     if (factor > 100)
                     {
                         for (int i = 0; i < factor - 100; i++)
@@ -84,11 +82,12 @@ namespace Tools
                     return new BigInteger(Negate(bytes1).ToArray());
                 case "u+":
                     return num1;
+                case "uMultiply":
+                case "u*":
+                    return new BigInteger(Multiply(bytes1, bytes1).ToArray());
                 default:
-                    Assert.True(false, String.Format("Invalid operation found: {0}", op));
-                    break;
+                    throw new ArgumentException(String.Format("Invalid operation found: {0}", op));
             }
-            return new BigInteger();
         }
 
         public static BigInteger DoBinaryOperatorMine(BigInteger num1, BigInteger num2, string op)
@@ -143,10 +142,8 @@ namespace Tools
                 case "b+":
                     return new BigInteger(Add(bytes1, bytes2).ToArray());
                 default:
-                    Assert.True(false, String.Format("Invalid operation found: {0}", op));
-                    break;
+                    throw new ArgumentException(String.Format("Invalid operation found: {0}", op));
             }
-            return new BigInteger();
         }
 
         public static BigInteger DoTertanaryOperatorMine(BigInteger num1, BigInteger num2, BigInteger num3, string op)
@@ -159,11 +156,10 @@ namespace Tools
             {
                 case "tModPow":
                     return new BigInteger(ModPow(bytes1, bytes2, bytes3).ToArray());
+
                 default:
-                    Assert.True(false, String.Format("Invalid operation found: {0}", op));
-                    break;
+                    throw new ArgumentException(String.Format("Invalid operation found: {0}", op));
             }
-            return new BigInteger();
         }
 
         public static List<byte> Add(List<byte> bytes1, List<byte> bytes2)

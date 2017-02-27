@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Runtime.CompilerServices;
@@ -432,7 +433,7 @@ namespace ManagedTests.DynamicCSharp.Conformance.dynamic.ClsCompliance.namingchr
 
         public class MyClass2 : MyClass
         {
-            //static public dynamic[,,,] array1; //cube array
+            //public static dynamic[,,,] array1; //cube array
             private dynamic _classIdentifier;
             private dynamic MEthod01(int n, ref dynamic d)
             {
@@ -459,7 +460,7 @@ namespace ManagedTests.DynamicCSharp.Conformance.dynamic.ClsCompliance.namingchr
                 return default(object);
             }
 
-            internal protected dynamic method03(U x, ref V y, params dynamic[] ary)
+            protected internal dynamic method03(U x, ref V y, params dynamic[] ary)
             {
                 return default(object);
             }
@@ -585,7 +586,7 @@ namespace ManagedTests.DynamicCSharp.Conformance.dynamic.ClsCompliance.typegener
                 return default(T);
             }
 
-            [Fact(Skip = "870811")]
+            
             public static void DynamicCSharpRunTest()
             {
                 Assert.Equal(0, MainMethod());

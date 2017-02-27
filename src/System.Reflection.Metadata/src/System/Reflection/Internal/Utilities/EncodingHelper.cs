@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -45,7 +46,7 @@ namespace System.Reflection.Internal
     /// (lightUpAttemptFailed || prefix != null), we give up and allocate a temporary array,
     /// copy to it, decode, and throw it away.
     /// </summary>
-    internal unsafe static class EncodingHelper
+    internal static unsafe class EncodingHelper
     {
         // Size of pooled buffers. Input larger than that is prefixed or given to us on a
         // platform that doesn't have unsafe Encoding.GetString, will cause us to
@@ -91,7 +92,7 @@ namespace System.Reflection.Internal
             Marshal.Copy((IntPtr)bytes, buffer, prefix.Length, byteCount);
 
             string result;
-            fixed (byte* prefixedBytes = buffer)
+            fixed (byte* prefixedBytes = &buffer[0])
             {
                 result = utf8Decoder.GetString(prefixedBytes, prefixedByteCount);
             }
@@ -148,12 +149,12 @@ namespace System.Reflection.Internal
 
             if (bytes == null)
             {
-                throw new ArgumentNullException("bytes");
+                throw new ArgumentNullException(nameof(bytes));
             }
 
             if (byteCount < 0)
             {
-                throw new ArgumentOutOfRangeException("byteCount");
+                throw new ArgumentOutOfRangeException(nameof(byteCount));
             }
 
             byte[] buffer = AcquireBuffer(byteCount);
@@ -179,6 +180,10 @@ namespace System.Reflection.Internal
                 }
                 catch (MemberAccessException)
                 {
+                }
+                catch (InvalidOperationException)
+                {
+                    // thrown when accessing unapproved API in a Windows Store app
                 }
             }
 
@@ -222,6 +227,10 @@ namespace System.Reflection.Internal
                     catch (MemberAccessException)
                     {
                     }
+                    catch (InvalidOperationException)
+                    {
+                        // thrown when accessing unapproved API in a Windows Store app
+                    }
                 }
             }
 
@@ -244,12 +253,12 @@ namespace System.Reflection.Internal
 
             if (bytes == null)
             {
-                throw new ArgumentNullException("bytes");
+                throw new ArgumentNullException(nameof(bytes));
             }
 
             if (byteCount < 0)
             {
-                throw new ArgumentOutOfRangeException("byteCount");
+                throw new ArgumentOutOfRangeException(nameof(byteCount));
             }
 
             return createStringFromEncoding(bytes, byteCount, encoding);

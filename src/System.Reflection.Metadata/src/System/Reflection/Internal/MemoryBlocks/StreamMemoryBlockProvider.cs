@@ -1,8 +1,10 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading;
 
 namespace System.Reflection.Internal
@@ -72,6 +74,7 @@ namespace System.Reflection.Internal
             }
         }
 
+        /// <exception cref="IOException">Error reading from the stream.</exception>
         internal static unsafe NativeHeapMemoryBlock ReadMemoryBlockNoLock(Stream stream, bool isFileStream, long start, int size)
         {
             var block = new NativeHeapMemoryBlock(size);
@@ -105,10 +108,10 @@ namespace System.Reflection.Internal
 
             if (_useMemoryMap && size > MemoryMapThreshold)
             {
-                IDisposable accessor;
-                if (TryCreateMemoryMapAccessor(absoluteStart, size, out accessor))
+                MemoryMappedFileBlock block;
+                if (TryCreateMemoryMappedFileBlock(absoluteStart, size, out block))
                 {
-                    return new MemoryMappedFileBlock(accessor, size);
+                    return block;
                 }
 
                 _useMemoryMap = false;
@@ -126,7 +129,8 @@ namespace System.Reflection.Internal
             return _stream;
         }
 
-        private bool TryCreateMemoryMapAccessor(long start, int size, out IDisposable accessor)
+        /// <exception cref="IOException">IO error while mapping memory or not enough memory to create the mapping.</exception>
+        private unsafe bool TryCreateMemoryMappedFileBlock(long start, int size, out MemoryMappedFileBlock block)
         {
             if (_lazyMemoryMap == null)
             {
@@ -141,7 +145,7 @@ namespace System.Reflection.Internal
 
                 if (newMemoryMap == null)
                 {
-                    accessor = null;
+                    block = null;
                     return false;
                 }
 
@@ -151,8 +155,23 @@ namespace System.Reflection.Internal
                 }
             }
 
-            accessor = MemoryMapLightUp.CreateViewAccessor(_lazyMemoryMap, start, size);
-            return accessor != null;
+            IDisposable accessor = MemoryMapLightUp.CreateViewAccessor(_lazyMemoryMap, start, size);
+            if (accessor == null)
+            {
+                block = null;
+                return false;
+            }
+
+            SafeBuffer safeBuffer;
+            byte* pointer = MemoryMapLightUp.AcquirePointer(accessor, out safeBuffer);
+            if (pointer == null)
+            {
+                block = null;
+                return false;
+            }
+
+            block = new MemoryMappedFileBlock(accessor, safeBuffer, pointer, size);
+            return true;
         }
     }
 }

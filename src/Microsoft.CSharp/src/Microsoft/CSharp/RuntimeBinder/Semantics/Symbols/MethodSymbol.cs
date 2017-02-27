@@ -1,7 +1,7 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
 using Microsoft.CSharp.RuntimeBinder.Syntax;
@@ -104,7 +104,7 @@ namespace Microsoft.CSharp.RuntimeBinder.Semantics
             return _methKind == MethodKindEnum.EventAccessor;
         }
 
-        public bool isExplicit()          // is user defined explicit conversion operator
+        private bool isExplicit()          // is user defined explicit conversion operator
         {
             return _methKind == MethodKindEnum.ExplicitConv;
         }
@@ -171,7 +171,7 @@ namespace Microsoft.CSharp.RuntimeBinder.Semantics
             return !isOperator && !isAnyAccessor();
         }
 
-        public bool isAnyAccessor()
+        private bool isAnyAccessor()
         {
             return isPropertyAccessor() || isEventAccessor();
         }
@@ -181,7 +181,7 @@ namespace Microsoft.CSharp.RuntimeBinder.Semantics
          */
         public bool isSetAccessor()
         {
-            if (!this.isPropertyAccessor())
+            if (!isPropertyAccessor())
             {
                 return false;
             }
@@ -206,11 +206,11 @@ namespace Microsoft.CSharp.RuntimeBinder.Semantics
     // used for CMOD_OPT interop
     // ----------------------------------------------------------------------------
 
-    internal class InterfaceImplementationMethodSymbol : MethodSymbol
+    internal sealed class InterfaceImplementationMethodSymbol : MethodSymbol
     {
     }
 
-    internal class IteratorFinallyMethodSymbol : MethodSymbol
+    internal sealed class IteratorFinallyMethodSymbol : MethodSymbol
     {
     }
 }

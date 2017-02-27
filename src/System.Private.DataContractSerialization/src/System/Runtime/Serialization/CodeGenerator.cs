@@ -1,8 +1,6 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
-//-----------------------------------------------------------------------------
-//-----------------------------------------------------------------------------
-// ***NOTE*** If this code is changed, make corresponding changes in System.ServiceModel.CodeGenerator also
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections;
@@ -15,72 +13,82 @@ using System.IO;
 using System.Security;
 using System.Diagnostics;
 
-
+#if !NET_NATIVE
 namespace System.Runtime.Serialization
 {
     internal class CodeGenerator
     {
-        /// <SecurityNote>
-        /// Critical - Static fields are marked SecurityCritical or readonly to prevent
-        ///            data from being modified or leaked to other components in appdomain.
-        /// </SecurityNote>
-        [SecurityCritical]
         private static MethodInfo s_getTypeFromHandle;
         private static MethodInfo GetTypeFromHandle
         {
-            /// <SecurityNote>
-            /// Critical - fetches the critical getTypeFromHandle field
-            /// Safe - get-only properties only needs to be protected for write; initialized in getter if null.
-            /// </SecurityNote>
-            [SecuritySafeCritical]
             get
             {
                 if (s_getTypeFromHandle == null)
+                {
                     s_getTypeFromHandle = typeof(Type).GetMethod("GetTypeFromHandle");
+                    Debug.Assert(s_getTypeFromHandle != null);
+                }
                 return s_getTypeFromHandle;
             }
         }
 
-        /// <SecurityNote>
-        /// Critical - Static fields are marked SecurityCritical or readonly to prevent
-        ///            data from being modified or leaked to other components in appdomain.
-        /// </SecurityNote>
-        [SecurityCritical]
         private static MethodInfo s_objectEquals;
         private static MethodInfo ObjectEquals
         {
-            /// <SecurityNote>
-            /// Critical - fetches the critical objectEquals field
-            /// Safe - get-only properties only needs to be protected for write; initialized in getter if null.
-            /// </SecurityNote>
-            [SecuritySafeCritical]
             get
             {
                 if (s_objectEquals == null)
+                {
                     s_objectEquals = Globals.TypeOfObject.GetMethod("Equals", BindingFlags.Public | BindingFlags.Static);
+                    Debug.Assert(s_objectEquals != null);
+                }
                 return s_objectEquals;
             }
         }
-        /// <SecurityNote>
-        /// Critical - Static fields are marked SecurityCritical or readonly to prevent
-        ///            data from being modified or leaked to other components in appdomain.
-        /// </SecurityNote>
-        [SecurityCritical]
+
         private static MethodInfo s_arraySetValue;
         private static MethodInfo ArraySetValue
         {
-            /// <SecurityNote>
-            /// Critical - fetches the critical arraySetValue field
-            /// Safe - get-only properties only needs to be protected for write; initialized in getter if null.
-            /// </SecurityNote>
-            [SecuritySafeCritical]
             get
             {
                 if (s_arraySetValue == null)
+                {
                     s_arraySetValue = typeof(Array).GetMethod("SetValue", new Type[] { typeof(object), typeof(int) });
+                    Debug.Assert(s_arraySetValue != null);
+                }
                 return s_arraySetValue;
             }
         }
+
+#if !NET_NATIVE
+        private static MethodInfo s_objectToString;
+        private static MethodInfo ObjectToString
+        {
+            get
+            {
+                if (s_objectToString == null)
+                {
+                    s_objectToString = typeof(object).GetMethod("ToString", Array.Empty<Type>());
+                    Debug.Assert(s_objectToString != null);
+                }
+                return s_objectToString;
+            }
+        }
+
+        private static MethodInfo s_stringFormat;
+        private static MethodInfo StringFormat
+        {
+            get
+            {
+                if (s_stringFormat == null)
+                {
+                    s_stringFormat = typeof(string).GetMethod("Format", new Type[] { typeof(string), typeof(object[]) });
+                    Debug.Assert(s_stringFormat != null);
+                }
+                return s_stringFormat;
+            }
+        }
+#endif
 
         private Type _delegateType;
 
@@ -91,24 +99,14 @@ namespace System.Runtime.Serialization
         static int typeCounter;
         MethodBuilder methodBuilder;
 #else
-        /// <SecurityNote>
-        /// Critical - Static fields are marked SecurityCritical or readonly to prevent
-        ///            data from being modified or leaked to other components in appdomain.
-        /// </SecurityNote>
-        [SecurityCritical]
         private static Module s_serializationModule;
         private static Module SerializationModule
         {
-            /// <SecurityNote>
-            /// Critical - fetches the critical serializationModule field
-            /// Safe - get-only properties only needs to be protected for write; initialized in getter if null.
-            /// </SecurityNote>
-            [SecuritySafeCritical]
             get
             {
                 if (s_serializationModule == null)
                 {
-                    s_serializationModule = typeof(CodeGenerator).GetTypeInfo().Module;   // could to be replaced by different dll that has SkipVerification set to false
+                    s_serializationModule = typeof(CodeGenerator).Module;   // could to be replaced by different dll that has SkipVerification set to false
                 }
                 return s_serializationModule;
             }
@@ -125,6 +123,10 @@ namespace System.Runtime.Serialization
 
         private enum CodeGenTrace { None, Save, Tron };
         private CodeGenTrace _codeGenTrace;
+
+#if !NET_NATIVE
+        private LocalBuilder _stringFormatArray;
+#endif
 
         internal CodeGenerator()
         {
@@ -153,7 +155,6 @@ namespace System.Runtime.Serialization
             BeginMethod(signature.ReturnType, methodName, paramTypes, allowPrivateMemberAccess);
             _delegateType = delegateType;
         }
-        [SecuritySafeCritical]
 
         private void BeginMethod(Type returnType, string methodName, Type[] argTypes, bool allowPrivateMemberAccess)
         {
@@ -372,7 +373,7 @@ namespace System.Runtime.Serialization
         {
             Type type = GetVariableType(value);
             TypeCode typeCode = type.GetTypeCode();
-            if ((typeCode == TypeCode.Object && type.GetTypeInfo().IsValueType) ||
+            if ((typeCode == TypeCode.Object && type.IsValueType) ||
                 typeCode == TypeCode.DateTime || typeCode == TypeCode.Decimal)
             {
                 LoadDefaultValue(type);
@@ -547,7 +548,7 @@ namespace System.Runtime.Serialization
 
         internal void Call(MethodInfo methodInfo)
         {
-            if (methodInfo.IsVirtual && !methodInfo.DeclaringType.GetTypeInfo().IsValueType)
+            if (methodInfo.IsVirtual && !methodInfo.DeclaringType.IsValueType)
             {
                 if (_codeGenTrace != CodeGenTrace.None)
                     EmitSourceInstruction("Callvirt " + methodInfo.ToString() + " on type " + methodInfo.DeclaringType.ToString());
@@ -636,7 +637,7 @@ namespace System.Runtime.Serialization
 
         private static bool IsStruct(Type objType)
         {
-            return objType.GetTypeInfo().IsValueType && !objType.GetTypeInfo().IsPrimitive;
+            return objType.IsValueType && !objType.IsPrimitive;
         }
 
         internal Type LoadMember(MemberInfo memberInfo)
@@ -721,7 +722,7 @@ namespace System.Runtime.Serialization
 
         internal void LoadDefaultValue(Type type)
         {
-            if (type.GetTypeInfo().IsValueType)
+            if (type.IsValueType)
             {
                 switch (type.GetTypeCode())
                 {
@@ -930,7 +931,7 @@ namespace System.Runtime.Serialization
                 Ldtoken((Type)o);
                 Call(GetTypeFromHandle);
             }
-            else if (valueType.GetTypeInfo().IsEnum)
+            else if (valueType.IsEnum)
             {
                 if (_codeGenTrace != CodeGenTrace.None)
                     EmitSourceComment("Ldc " + o.GetType() + "." + o);
@@ -977,7 +978,6 @@ namespace System.Runtime.Serialization
                     case TypeCode.Decimal:
                     case TypeCode.DateTime:
                     case TypeCode.Empty:
-                    case TypeCode.DBNull:
                     default:
                         throw System.Runtime.Serialization.DiagnosticUtility.ExceptionUtility.ThrowHelperError(XmlObjectSerializer.CreateSerializationException(SR.Format(SR.UnknownConstantType, DataContract.GetClrTypeFullName(valueType))));
                 }
@@ -1072,7 +1072,7 @@ namespace System.Runtime.Serialization
 
         internal void LdlocAddress(LocalBuilder localBuilder)
         {
-            if (localBuilder.LocalType.GetTypeInfo().IsValueType)
+            if (localBuilder.LocalType.IsValueType)
                 Ldloca(localBuilder);
             else
                 Ldloc(localBuilder);
@@ -1105,7 +1105,7 @@ namespace System.Runtime.Serialization
 
         internal void LdargAddress(ArgBuilder argBuilder)
         {
-            if (argBuilder.ArgType.GetTypeInfo().IsValueType)
+            if (argBuilder.ArgType.IsValueType)
                 Ldarga(argBuilder);
             else
                 Ldarg(argBuilder);
@@ -1188,7 +1188,6 @@ namespace System.Runtime.Serialization
             switch (typeCode)
             {
                 case TypeCode.Object:
-                case TypeCode.DBNull:
                     return OpCodes.Ldelem_Ref;// TypeCode.Object:
                 case TypeCode.Boolean:
                     return OpCodes.Ldelem_I1;// TypeCode.Boolean:
@@ -1223,7 +1222,7 @@ namespace System.Runtime.Serialization
 
         internal void Ldelem(Type arrayElementType)
         {
-            if (arrayElementType.GetTypeInfo().IsEnum)
+            if (arrayElementType.IsEnum)
             {
                 Ldelem(Enum.GetUnderlyingType(arrayElementType));
             }
@@ -1253,7 +1252,6 @@ namespace System.Runtime.Serialization
             switch (typeCode)
             {
                 case TypeCode.Object:
-                case TypeCode.DBNull:
                     return OpCodes.Stelem_Ref;// TypeCode.Object:
                 case TypeCode.Boolean:
                     return OpCodes.Stelem_I1;// TypeCode.Boolean:
@@ -1288,7 +1286,7 @@ namespace System.Runtime.Serialization
 
         internal void Stelem(Type arrayElementType)
         {
-            if (arrayElementType.GetTypeInfo().IsEnum)
+            if (arrayElementType.IsEnum)
                 Stelem(Enum.GetUnderlyingType(arrayElementType));
             else
             {
@@ -1464,9 +1462,9 @@ namespace System.Runtime.Serialization
         {
             if (target == source)
                 return;
-            if (target.GetTypeInfo().IsValueType)
+            if (target.IsValueType)
             {
-                if (source.GetTypeInfo().IsValueType)
+                if (source.IsValueType)
                 {
                     OpCode opCode = GetConvOpCode(target.GetTypeCode());
                     if (opCode.Equals(OpCodes.Nop))
@@ -1489,7 +1487,7 @@ namespace System.Runtime.Serialization
             }
             else if (target.IsAssignableFrom(source))
             {
-                if (source.GetTypeInfo().IsValueType)
+                if (source.IsValueType)
                 {
                     if (isAddress)
                         Ldobj(source);
@@ -1498,10 +1496,9 @@ namespace System.Runtime.Serialization
             }
             else if (source.IsAssignableFrom(target))
             {
-                //assert(source.GetTypeInfo().IsValueType == false);
                 Castclass(target);
             }
-            else if (target.GetTypeInfo().IsInterface || source.GetTypeInfo().IsInterface)
+            else if (target.IsInterface || source.IsInterface)
             {
                 Castclass(target);
             }
@@ -1519,7 +1516,6 @@ namespace System.Runtime.Serialization
         }
 
 #if USE_REFEMIT
-        [SecuritySafeCritical]
         void InitAssemblyBuilder(string methodName)
         {
             AssemblyName name = new AssemblyName();
@@ -1623,6 +1619,55 @@ namespace System.Runtime.Serialization
             Load(0);
             If(Cmp.NotEqualTo);
         }
+
+#if !NET_NATIVE
+        internal void BeginWhileCondition()
+        {
+            Label startWhile = DefineLabel();
+            MarkLabel(startWhile);
+            _blockStack.Push(startWhile);
+        }
+
+        internal void BeginWhileBody(Cmp cmpOp)
+        {
+            Label startWhile = (Label)_blockStack.Pop();
+            If(cmpOp);
+            _blockStack.Push(startWhile);
+        }
+
+        internal void EndWhile()
+        {
+            Label startWhile = (Label)_blockStack.Pop();
+            Br(startWhile);
+            EndIf();
+        }
+
+        internal void CallStringFormat(string msg, params object[] values)
+        {
+            NewArray(typeof(object), values.Length);
+            if (_stringFormatArray == null)
+                _stringFormatArray = DeclareLocal(typeof(object[]), "stringFormatArray");
+            Stloc(_stringFormatArray);
+            for (int i = 0; i < values.Length; i++)
+                StoreArrayElement(_stringFormatArray, i, values[i]);
+
+            Load(msg);
+            Load(_stringFormatArray);
+            Call(StringFormat);
+        }
+
+        internal void ToString(Type type)
+        {
+            if (type != Globals.TypeOfString)
+            {
+                if (type.IsValueType)
+                {
+                    Box(type);
+                }
+                Call(ObjectToString);
+            }
+        }
+#endif
     }
 
 
@@ -1791,3 +1836,4 @@ namespace System.Runtime.Serialization
         }
     }
 }
+#endif

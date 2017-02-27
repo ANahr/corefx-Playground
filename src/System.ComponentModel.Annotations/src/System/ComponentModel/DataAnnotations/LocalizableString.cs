@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Globalization;
 using System.Reflection;
@@ -129,7 +130,7 @@ namespace System.ComponentModel.DataAnnotations
                     var badlyConfigured = false;
 
                     // Make sure we found the property and it's the correct type, and that the type itself is public
-                    if (!_resourceType.GetTypeInfo().IsVisible || property == null ||
+                    if (!_resourceType.IsVisible || property == null ||
                         property.PropertyType != typeof(string))
                     {
                         badlyConfigured = true;

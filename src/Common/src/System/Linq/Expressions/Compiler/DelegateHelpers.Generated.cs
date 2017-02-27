@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -31,7 +32,7 @@ namespace System.Linq.Expressions.Compiler
             if (!curTypeInfo.TypeChain.TryGetValue(lookingUp, out nextTypeInfo))
             {
                 nextTypeInfo = new TypeInfo();
-                if (TypeUtils.CanCache(lookingUp))
+                if (lookingUp.CanCache())
                 {
                     curTypeInfo.TypeChain[lookingUp] = nextTypeInfo;
                 }
@@ -39,7 +40,18 @@ namespace System.Linq.Expressions.Compiler
             return nextTypeInfo;
         }
 
-#if !FEATURE_CORECLR
+#if !FEATURE_COMPILE
+
+        public delegate object VBCallSiteDelegate0<T>(T callSite, object instance);
+        public delegate object VBCallSiteDelegate1<T>(T callSite, object instance, ref object arg1);
+        public delegate object VBCallSiteDelegate2<T>(T callSite, object instance, ref object arg1, ref object arg2);
+        public delegate object VBCallSiteDelegate3<T>(T callSite, object instance, ref object arg1, ref object arg2, ref object arg3);
+        public delegate object VBCallSiteDelegate4<T>(T callSite, object instance, ref object arg1, ref object arg2, ref object arg3, ref object arg4);
+        public delegate object VBCallSiteDelegate5<T>(T callSite, object instance, ref object arg1, ref object arg2, ref object arg3, ref object arg4, ref object arg5);
+        public delegate object VBCallSiteDelegate6<T>(T callSite, object instance, ref object arg1, ref object arg2, ref object arg3, ref object arg4, ref object arg5, ref object arg6);
+        public delegate object VBCallSiteDelegate7<T>(T callSite, object instance, ref object arg1, ref object arg2, ref object arg3, ref object arg4, ref object arg5, ref object arg6, ref object arg7);
+
+
         private static Type TryMakeVBStyledCallSite(Type[] types)
         {
             // Shape of VB CallSiteDelegates is CallSite * (instance : obj) * [arg-n : byref obj] -> obj
@@ -61,18 +73,18 @@ namespace System.Linq.Expressions.Compiler
 
             switch (types.Length - 1)
             {
-                case 2: return typeof(Dynamic.Utils.DelegateHelpers.VBCallSiteDelegate0<>).MakeGenericType(types[0]);
-                case 3: return typeof(Dynamic.Utils.DelegateHelpers.VBCallSiteDelegate1<>).MakeGenericType(types[0]);
-                case 4: return typeof(Dynamic.Utils.DelegateHelpers.VBCallSiteDelegate2<>).MakeGenericType(types[0]);
-                case 5: return typeof(Dynamic.Utils.DelegateHelpers.VBCallSiteDelegate3<>).MakeGenericType(types[0]);
-                case 6: return typeof(Dynamic.Utils.DelegateHelpers.VBCallSiteDelegate4<>).MakeGenericType(types[0]);
-                case 7: return typeof(Dynamic.Utils.DelegateHelpers.VBCallSiteDelegate5<>).MakeGenericType(types[0]);
-                case 8: return typeof(Dynamic.Utils.DelegateHelpers.VBCallSiteDelegate6<>).MakeGenericType(types[0]);
-                case 9: return typeof(Dynamic.Utils.DelegateHelpers.VBCallSiteDelegate7<>).MakeGenericType(types[0]);
+                case 2: return typeof(VBCallSiteDelegate0<>).MakeGenericType(types[0]);
+                case 3: return typeof(VBCallSiteDelegate1<>).MakeGenericType(types[0]);
+                case 4: return typeof(VBCallSiteDelegate2<>).MakeGenericType(types[0]);
+                case 5: return typeof(VBCallSiteDelegate3<>).MakeGenericType(types[0]);
+                case 6: return typeof(VBCallSiteDelegate4<>).MakeGenericType(types[0]);
+                case 7: return typeof(VBCallSiteDelegate5<>).MakeGenericType(types[0]);
+                case 8: return typeof(VBCallSiteDelegate6<>).MakeGenericType(types[0]);
+                case 9: return typeof(VBCallSiteDelegate7<>).MakeGenericType(types[0]);
                 default: return null;
             }
         }
-#endif 
+#endif
 
         /// <summary>
         /// Creates a new delegate, or uses a func/action
@@ -97,7 +109,8 @@ namespace System.Linq.Expressions.Compiler
 
                 for (int i = 0; i < types.Length; i++)
                 {
-                    if (types[i].IsByRef)
+                    Type type = types[i];
+                    if (type.IsByRef || type.IsPointer)
                     {
                         needCustom = true;
                         break;
@@ -107,11 +120,11 @@ namespace System.Linq.Expressions.Compiler
 
             if (needCustom)
             {
-#if FEATURE_CORECLR
+#if FEATURE_COMPILE
                 return MakeNewCustomDelegate(types);
 #else
                 return TryMakeVBStyledCallSite(types) ?? MakeNewCustomDelegate(types);
-#endif 
+#endif
             }
 
             Type result;
@@ -123,6 +136,7 @@ namespace System.Linq.Expressions.Compiler
             {
                 result = GetFuncType(types);
             }
+
             Debug.Assert(result != null);
             return result;
         }

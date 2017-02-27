@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using Xunit;
 
@@ -18,7 +19,7 @@ namespace ManagedTests.DynamicCSharp.Conformance.dynamic.dynamicType.overloadRes
             s_status = 1;
         }
 
-        internal protected void Method(long x, object o)
+        protected internal void Method(long x, object o)
         {
             s_status = 2;
         }
@@ -30,7 +31,7 @@ namespace ManagedTests.DynamicCSharp.Conformance.dynamic.dynamicType.overloadRes
 
         private static int s_status = -1;
 
-        [Fact(Skip = "875112")]
+        
         public static void DynamicCSharpRunTest()
         {
             Assert.Equal(0, MainMethod(null));
@@ -65,7 +66,7 @@ namespace ManagedTests.DynamicCSharp.Conformance.dynamic.dynamicType.overloadRes
             s_status = 1;
         }
 
-        internal protected void Method(long x, object o)
+        protected internal void Method(long x, object o)
         {
             s_status = 2;
         }
@@ -76,7 +77,7 @@ namespace ManagedTests.DynamicCSharp.Conformance.dynamic.dynamicType.overloadRes
         }
 
         private static int s_status = -1;
-        [Fact(Skip = "875112")]
+        
         public static void DynamicCSharpRunTest()
         {
             Assert.Equal(0, MainMethod(null));
@@ -368,7 +369,7 @@ namespace ManagedTests.DynamicCSharp.Conformance.dynamic.dynamicType.overloadRes
         }
 
         private static int s_status = -1;
-        [Fact(Skip = "875112")]
+        
         public static void DynamicCSharpRunTest()
         {
             Assert.Equal(0, MainMethod(null));
@@ -401,7 +402,7 @@ namespace ManagedTests.DynamicCSharp.Conformance.dynamic.dynamicType.overloadRes
             }
         }
 
-        [Fact(Skip = "875112")]
+        
         public static void DynamicCSharpRunTest()
         {
             Assert.Equal(0, MainMethod(null));
@@ -436,7 +437,7 @@ namespace ManagedTests.DynamicCSharp.Conformance.dynamic.dynamicType.overloadRes
             {
             }
 
-            internal protected void Method(long x, object o)
+            protected internal void Method(long x, object o)
             {
             }
 
@@ -449,7 +450,7 @@ namespace ManagedTests.DynamicCSharp.Conformance.dynamic.dynamicType.overloadRes
             }
         }
 
-        [Fact(Skip = "875112")]
+        
         public static void DynamicCSharpRunTest()
         {
             Assert.Equal(0, MainMethod(null));
@@ -497,7 +498,7 @@ namespace ManagedTests.DynamicCSharp.Conformance.dynamic.dynamicType.overloadRes
 
         private static int s_status = -1;
 
-        [Fact(Skip = "875112")]
+        
         public static void DynamicCSharpRunTest()
         {
             Assert.Equal(0, MainMethod(null));
@@ -535,7 +536,7 @@ namespace ManagedTests.DynamicCSharp.Conformance.dynamic.dynamicType.overloadRes
                 }
             }
 
-            [Fact(Skip = "875112")]
+            
             public static void DynamicCSharpRunTest()
             {
                 Assert.Equal(0, MainMethod(null));
@@ -571,7 +572,7 @@ namespace ManagedTests.DynamicCSharp.Conformance.dynamic.dynamicType.overloadRes
 
         public static int Status;
 
-        [Fact(Skip = "875112")]
+        
         public static void DynamicCSharpRunTest()
         {
             Assert.Equal(0, MainMethod(null));

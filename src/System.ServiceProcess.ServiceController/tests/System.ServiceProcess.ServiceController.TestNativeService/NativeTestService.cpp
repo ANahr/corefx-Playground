@@ -1,38 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
-//
-// This is a simple Win32 service which does nothing except respond to control
-// events by settings its status appropriately. It takes its own service and
-// service display name as parameters to allow many tests to spin up their own
-// instances of this service in parallel.
-//
-// Because this will eventually run on OneCore on systems which may not have
-// sc.exe, this also provides a means to create, start, stop, and delete this
-// service via the command line:
-//
-//   - When run like this:
-//
-//       System.ServiceProcess.ServiceController.TestNativeService.exe "TestService" "Test Service" create
-//
-//     This creates a service named "TestService" with display name
-//     "Test Service", and starts the service. This also creates additional
-//     instances of this service which depend on "TestService" for the purposes
-//     of testing.
-//
-//   - When run like this:
-//
-//       System.ServiceProcess.ServiceController.TestNativeService.exe "TestService" "Test Service" delete
-//
-//     This attempts to stop "TestService" and delete it and its dependent
-//     services.
-//
-//   - When run like this:
-//
-//       System.ServiceProcess.ServiceController.TestNativeService.exe "TestService" "Test Service"
-//
-//     This executable assumes it is being run as a service, and simply waits
-//     for and responds to control events.
-//
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -67,7 +35,7 @@ std::wstring            gDependentServiceDisplayNames[DEPENDENT_SERVICES];
 // Service Management Methods
 VOID GenerateDependentServiceNames();
 BOOL CreateTestServices();
-SC_HANDLE CreateTestService(SC_HANDLE, LPCTSTR, LPCTSTR, LPCTSTR, LPCTSTR dependencies = NULL);
+SC_HANDLE CreateTestService(SC_HANDLE, LPCTSTR, LPCTSTR, LPCTSTR, int, LPCTSTR dependencies = NULL);
 BOOL DeleteTestServices();
 BOOL DeleteTestService(SC_HANDLE, LPCTSTR);
 
@@ -137,7 +105,7 @@ int _tmain(int argc, _TCHAR* argv [])
 		}
 		else
 		{
-			wprintf(L"error: Invalid action '%s'\n", action);
+			wprintf(L"error: Invalid action '%s'\n", action.c_str());
 			return -1;
 		}
 	}
@@ -191,7 +159,9 @@ BOOL CreateTestServices()
 		hScManager,
 		gServiceName,
 		gServiceDisplayName,
-		serviceCommand.c_str());
+		serviceCommand.c_str(),
+		SERVICE_DEMAND_START
+		);
 
 	if (hService == NULL)
 	{
@@ -211,6 +181,7 @@ BOOL CreateTestServices()
 			gDependentServiceNames[i].c_str(),
 			gDependentServiceDisplayNames[i].c_str(),
 			serviceCommand.c_str(),
+			SERVICE_DISABLED,
 			dependencies.c_str());
 
 		if (hDependentService == NULL)
@@ -251,7 +222,7 @@ BOOL CreateTestServices()
 	return result;
 }
 
-SC_HANDLE CreateTestService(SC_HANDLE hScManager, LPCTSTR name, LPCTSTR displayName, LPCTSTR command, LPCTSTR dependencies)
+SC_HANDLE CreateTestService(SC_HANDLE hScManager, LPCTSTR name, LPCTSTR displayName, LPCTSTR command, int startType, LPCTSTR dependencies)
 {
 	SC_HANDLE hService = CreateService(
 		hScManager,                // SCM database 
@@ -259,7 +230,7 @@ SC_HANDLE CreateTestService(SC_HANDLE hScManager, LPCTSTR name, LPCTSTR displayN
 		displayName,               // service name to display 
 		SERVICE_ALL_ACCESS,        // desired access 
 		SERVICE_WIN32_OWN_PROCESS, // service type 
-		SERVICE_DEMAND_START,      // start type 
+		startType,                 // start type 
 		SERVICE_ERROR_NORMAL,      // error control type 
 		command,                   // path to service's binary + arguments
 		NULL,                      // no load ordering group 
@@ -526,10 +497,18 @@ VOID ServiceInit(DWORD dwArgc, LPTSTR* lpszArgv)
 	{
 		// Check whether to stop the service.
 
-		WaitForSingleObject(ghServiceStopEvent, INFINITE);
+        // If the tests haven't finished within 90 seconds, just end the program anyways.
+		DWORD error = WaitForSingleObject(ghServiceStopEvent, 90000);
 
 		// We're stopping, delete the log file
-		DWORD error = DeleteLogFile();
+		DWORD logError = DeleteLogFile();
+
+        // If WaitForSingleObject fails, use that code.
+        // Otherwise use the result of DeleteLogFile.
+        if (error == ERROR_SUCCESS)
+        {
+            error = logError;
+        }
 
 		ServiceReportStatus(SERVICE_STOPPED, error, 0);
 		return;
@@ -655,7 +634,6 @@ DWORD DeleteLogFile()
 	if (!DeleteFile(gLogFilePath.c_str()))
 	{
 		DWORD error = GetLastError();
-		LogMessage(L"warning: Failed to delete log file '%s' (%d)\n", gLogFilePath.c_str(), error);
 		return error;
 	}
 

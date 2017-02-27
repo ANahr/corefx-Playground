@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Globalization;
 using System.Linq;
@@ -112,6 +113,16 @@ namespace System.ComponentModel.DataAnnotations
             get { return _method; }
         }
 
+        public override bool RequiresValidationContext 
+        {
+            get 
+            {
+                // If attribute is not valid, throw an exception right away to inform the developer
+                ThrowIfAttributeNotWellFormed();
+                // We should return true when 2-parameter form of the validation method is used
+                return !_isSingleArgumentMethod;
+            }
+        }
         #endregion
 
         /// <summary>
@@ -222,7 +233,7 @@ namespace System.ComponentModel.DataAnnotations
                 return SR.CustomValidationAttribute_ValidatorType_Required;
             }
 
-            if (!_validatorType.GetTypeInfo().IsVisible)
+            if (!_validatorType.IsVisible)
             {
                 return string.Format(CultureInfo.CurrentCulture,
                     SR.CustomValidationAttribute_Type_Must_Be_Public, _validatorType.Name);
@@ -316,8 +327,8 @@ namespace System.ComponentModel.DataAnnotations
             // Null is permitted for reference types or for Nullable<>'s only
             if (value == null)
             {
-                if (expectedValueType.GetTypeInfo().IsValueType
-                    && (!expectedValueType.GetTypeInfo().IsGenericType
+                if (expectedValueType.IsValueType
+                    && (!expectedValueType.IsGenericType
                         || expectedValueType.GetGenericTypeDefinition() != typeof(Nullable<>)))
                 {
                     return false;
@@ -327,7 +338,7 @@ namespace System.ComponentModel.DataAnnotations
             }
 
             // If the type is already legally assignable, we're good
-            if (expectedValueType.GetTypeInfo().IsAssignableFrom(value.GetType().GetTypeInfo()))
+            if (expectedValueType.IsInstanceOfType(value))
             {
                 convertedValue = value;
                 return true;

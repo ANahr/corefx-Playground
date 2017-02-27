@@ -1,10 +1,11 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Threading.Tasks;
 using Xunit;
 
 public class ReadAndWrite
@@ -28,6 +29,13 @@ public class ReadAndWrite
         {
             Console.SetOut(savedStandardOutput);
         }
+    }
+    
+    [Fact]
+    public static void WriteToOutputStream_EmptyArray()
+    {
+        Stream outStream = Console.OpenStandardOutput();
+        outStream.Write(new byte[] { }, 0, 0);
     }
 
     [Fact]
@@ -97,6 +105,11 @@ public class ReadAndWrite
 
     private static void WriteLineCore()
     {
+        Assert.Equal(Environment.NewLine, Console.Out.NewLine);
+        Console.Out.NewLine = "abcd";
+        Assert.Equal("abcd", Console.Out.NewLine);
+        Console.Out.NewLine = Environment.NewLine;
+
         // We just want to ensure none of these throw exceptions, we don't actually validate 
         // what was written.
 
@@ -124,6 +137,174 @@ public class ReadAndWrite
         Console.WriteLine(50UL);
         Console.WriteLine(new object());
         Console.WriteLine("Hello World");
+    }
+
+    [Fact]
+    public static async Task OutWriteAndWriteLineOverloads()
+    {
+        TextWriter savedStandardOutput = Console.Out;
+        try
+        {
+            using (var sw = new StreamWriter(new MemoryStream()))
+            {
+                Console.SetOut(sw);
+                TextWriter writer = Console.Out;
+                Assert.NotNull(writer);
+                Assert.NotEqual(writer, sw); // the writer we provide gets wrapped
+
+                // We just want to ensure none of these throw exceptions, we don't actually validate 
+                // what was written.
+
+                writer.Write("{0}", 32);
+                writer.Write("{0} {1}", 32, "Hello");
+                writer.Write("{0} {1} {2}", 32, "Hello", (uint)50);
+                writer.Write("{0} {1} {2} {3}", 32, "Hello", (uint)50, (ulong)5);
+                writer.Write("{0} {1} {2} {3} {4}", 32, "Hello", (uint)50, (ulong)5, 'a');
+                writer.Write(true);
+                writer.Write('a');
+                writer.Write(new char[] { 'a', 'b', 'c', 'd', });
+                writer.Write(new char[] { 'a', 'b', 'c', 'd', }, 1, 2);
+                writer.Write(1.23d);
+                writer.Write(123.456M);
+                writer.Write(1.234f);
+                writer.Write(39);
+                writer.Write(50u);
+                writer.Write(50L);
+                writer.Write(50UL);
+                writer.Write(new object());
+                writer.Write("Hello World");
+
+                writer.Flush();
+
+                await writer.WriteAsync('c');
+                await writer.WriteAsync(new char[] { 'a', 'b', 'c', 'd' });
+                await writer.WriteAsync(new char[] { 'a', 'b', 'c', 'd' }, 1, 2);
+                await writer.WriteAsync("Hello World");
+
+                await writer.WriteLineAsync('c');
+                await writer.WriteLineAsync(new char[] { 'a', 'b', 'c', 'd' });
+                await writer.WriteLineAsync(new char[] { 'a', 'b', 'c', 'd' }, 1, 2);
+                await writer.WriteLineAsync("Hello World");
+
+                await writer.FlushAsync();
+            }
+        }
+        finally
+        {
+            Console.SetOut(savedStandardOutput);
+        }
+    }
+
+    public static unsafe void ValidateConsoleEncoding(Encoding encoding)
+    {
+        Assert.NotNull(encoding);
+
+        // There's not much validation we can do, but we can at least invoke members
+        // to ensure they don't throw exceptions as they delegate to the underlying
+        // encoding wrapped by ConsoleEncoding.
+
+        Assert.False(string.IsNullOrWhiteSpace(encoding.EncodingName));
+        Assert.False(string.IsNullOrWhiteSpace(encoding.WebName));
+        Assert.True(encoding.CodePage >= 0);
+        bool ignored = encoding.IsSingleByte;
+
+        // And we can validate that the encoding is self-consistent by roundtripping
+        // data between chars and bytes.
+
+        string str = "This is the input string.";
+        char[] strAsChars = str.ToCharArray();
+        byte[] strAsBytes = encoding.GetBytes(str);
+        Assert.Equal(strAsBytes.Length, encoding.GetByteCount(str));
+        Assert.True(encoding.GetMaxByteCount(str.Length) >= strAsBytes.Length);
+
+        Assert.Equal(str, encoding.GetString(strAsBytes));
+        Assert.Equal(str, encoding.GetString(strAsBytes, 0, strAsBytes.Length));
+        Assert.Equal(str, new string(encoding.GetChars(strAsBytes)));
+        Assert.Equal(str, new string(encoding.GetChars(strAsBytes, 0, strAsBytes.Length)));
+        fixed (byte* bytesPtr = strAsBytes)
+        {
+            char[] outputArr = new char[encoding.GetMaxCharCount(strAsBytes.Length)];
+
+            int len = encoding.GetChars(strAsBytes, 0, strAsBytes.Length, outputArr, 0);
+            Assert.Equal(str, new string(outputArr, 0, len));
+            Assert.Equal(len, encoding.GetCharCount(strAsBytes));
+            Assert.Equal(len, encoding.GetCharCount(strAsBytes, 0, strAsBytes.Length));
+
+            fixed (char* charsPtr = outputArr)
+            {
+                len = encoding.GetChars(bytesPtr, strAsBytes.Length, charsPtr, outputArr.Length);
+                Assert.Equal(str, new string(charsPtr, 0, len));
+                Assert.Equal(len, encoding.GetCharCount(bytesPtr, strAsBytes.Length));
+            }
+
+            Assert.Equal(str, encoding.GetString(bytesPtr, strAsBytes.Length));
+        }
+
+        Assert.Equal(strAsBytes, encoding.GetBytes(strAsChars));
+        Assert.Equal(strAsBytes, encoding.GetBytes(strAsChars, 0, strAsChars.Length));
+        Assert.Equal(strAsBytes.Length, encoding.GetByteCount(strAsChars));
+        Assert.Equal(strAsBytes.Length, encoding.GetByteCount(strAsChars, 0, strAsChars.Length));
+        fixed (char* charsPtr = strAsChars)
+        {
+            Assert.Equal(strAsBytes.Length, encoding.GetByteCount(charsPtr, strAsChars.Length));
+
+            byte[] outputArr = new byte[encoding.GetMaxByteCount(strAsChars.Length)];
+            Assert.Equal(strAsBytes.Length, encoding.GetBytes(strAsChars, 0, strAsChars.Length, outputArr, 0));
+            fixed (byte* bytesPtr = outputArr)
+            {
+                Assert.Equal(strAsBytes.Length, encoding.GetBytes(charsPtr, strAsChars.Length, bytesPtr, outputArr.Length));
+            }
+            Assert.Equal(strAsBytes.Length, encoding.GetBytes(str, 0, str.Length, outputArr, 0));
+        }
+    }
+
+    [Fact]
+    // On the full framework it is not guaranteed to eat the preamble bytes
+    [SkipOnTargetFramework(TargetFrameworkMonikers.NetFramework)]
+    public static unsafe void OutputEncodingPreamble()
+    {
+        Encoding curEncoding = Console.OutputEncoding;
+
+        try
+        {
+            Encoding encoding = Console.Out.Encoding;
+            // The primary purpose of ConsoleEncoding is to return an empty preamble.
+            Assert.Equal(Array.Empty<byte>(), encoding.GetPreamble());
+
+            // Try setting the ConsoleEncoding to something else and see if it works.
+            Console.OutputEncoding = Encoding.Unicode;
+            // The primary purpose of ConsoleEncoding is to return an empty preamble.
+            Assert.Equal(Array.Empty<byte>(), Console.Out.Encoding.GetPreamble());
+        }
+        finally
+        {
+            Console.OutputEncoding = curEncoding;
+        }
+    }
+
+    [Fact]
+    public static unsafe void OutputEncoding()
+    {
+        Encoding curEncoding = Console.OutputEncoding;
+
+        try
+        {
+            Assert.Same(Console.Out, Console.Out);
+
+            Encoding encoding = Console.Out.Encoding;
+            Assert.NotNull(encoding);
+            Assert.Same(encoding, Console.Out.Encoding);
+            ValidateConsoleEncoding(encoding);
+
+            // Try setting the ConsoleEncoding to something else and see if it works.
+            Console.OutputEncoding = Encoding.Unicode;
+            Assert.Equal(Console.OutputEncoding.CodePage, Encoding.Unicode.CodePage);
+            ValidateConsoleEncoding(Console.Out.Encoding);
+        }
+        finally
+        {
+            Console.OutputEncoding = curEncoding;
+        }
     }
 
     static readonly string[] s_testLines = new string[] {

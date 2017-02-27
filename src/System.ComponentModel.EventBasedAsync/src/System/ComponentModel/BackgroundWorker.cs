@@ -1,13 +1,15 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace System.ComponentModel
 {
-    public class BackgroundWorker : IDisposable
+    public class BackgroundWorker : Component
     {
         // Private instance members
         private bool _canCancelWorker = false;
@@ -175,6 +177,8 @@ namespace System.ComponentModel
 
         private void WorkerThreadStart(object argument)
         {
+            Debug.Assert(_asyncOperation != null, "_asyncOperation not initialized");
+
             object workerResult = null;
             Exception error = null;
             bool cancelled = false;
@@ -197,26 +201,11 @@ namespace System.ComponentModel
                 error = exception;
             }
 
-            RunWorkerCompletedEventArgs e =
-                new RunWorkerCompletedEventArgs(workerResult, error, cancelled);
-
-            if (_asyncOperation != null)
-            {
-                _asyncOperation.PostOperationCompleted(_operationCompleted, e);
-            }
-            else
-            {
-                _operationCompleted(e);
-            }
+            var e = new RunWorkerCompletedEventArgs(workerResult, error, cancelled);
+            _asyncOperation.PostOperationCompleted(_operationCompleted, e);
         }
 
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        protected virtual void Dispose(bool disposing)
+        protected override void Dispose(bool disposing)
         {
         }
     }

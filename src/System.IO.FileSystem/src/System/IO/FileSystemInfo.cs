@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections;
@@ -7,26 +8,38 @@ using System.Security;
 using Microsoft.Win32;
 using System.Text;
 using System.Runtime.InteropServices;
+using System.Runtime.Serialization;
 using System.Runtime.Versioning;
-using System.Diagnostics.Contracts;
 
 namespace System.IO
 {
-    public abstract class FileSystemInfo
+    [Serializable]
+    public abstract partial class FileSystemInfo : MarshalByRefObject, ISerializable
     {
         protected String FullPath;          // fully qualified path of the file or directory
         protected String OriginalPath;      // path passed in by the user
         private String _displayPath = "";   // path that can be displayed to the user
-        private IFileSystemObject _fileSystemObject;  // backing implementation
 
         [System.Security.SecurityCritical]
         protected FileSystemInfo()
         {
         }
 
-        internal FileSystemInfo(IFileSystemObject fileSystemObject)
+        protected FileSystemInfo(SerializationInfo info, StreamingContext context)
         {
-            _fileSystemObject = fileSystemObject;
+            if (info == null)
+            {
+                throw new ArgumentNullException(nameof(info));
+            }
+
+            FullPath = Path.GetFullPath(info.GetString(nameof(FullPath)));
+            OriginalPath = info.GetString(nameof(OriginalPath));
+        }
+
+        public virtual void GetObjectData(SerializationInfo info, StreamingContext context)
+        {
+            info.AddValue(nameof(OriginalPath), OriginalPath, typeof(String));
+            info.AddValue(nameof(FullPath), FullPath, typeof(String));
         }
 
         // Full path of the directory/file
@@ -50,24 +63,10 @@ namespace System.IO
                     char ch = FullPath[i];
                     if (ch == '.')
                         return FullPath.Substring(i, length - i);
-                    if (PathHelpers.IsDirectorySeparator(ch) || ch == Path.VolumeSeparatorChar)
+                    if (PathInternal.IsDirectorySeparator(ch) || ch == Path.VolumeSeparatorChar)
                         break;
                 }
                 return String.Empty;
-            }
-        }
-
-        // Lazy accessor for backing implementation
-        internal IFileSystemObject FileSystemObject
-        {
-            get
-            {
-                if (_fileSystemObject == null)
-                {
-                    _fileSystemObject = FileSystem.Current.GetFileSystemInfo(FullPath, this is DirectoryInfo);
-                }
-
-                return _fileSystemObject;
             }
         }
 
@@ -199,11 +198,6 @@ namespace System.IO
             {
                 _displayPath = value;
             }
-        }
-
-        internal void Invalidate()
-        {
-            _fileSystemObject = null;
         }
     }
 }

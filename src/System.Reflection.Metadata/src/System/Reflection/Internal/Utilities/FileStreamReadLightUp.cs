@@ -1,9 +1,9 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Diagnostics;
 using System.IO;
-using System.Reflection.Metadata;
 using System.Runtime.InteropServices;
 
 namespace System.Reflection.Internal
@@ -62,6 +62,12 @@ namespace System.Reflection.Internal
             }
             catch (MemberAccessException)
             {
+                safeFileHandleNotAvailable = true;
+                return null;
+            }
+            catch (InvalidOperationException)
+            {
+                // thrown when accessing unapproved API in a Windows Store app
                 safeFileHandleNotAvailable = true;
                 return null;
             }
@@ -136,10 +142,13 @@ namespace System.Reflection.Internal
             return true;
         }
 
+
+// The library guards against unavailable entrypoints by using EntryPointNotFoundException.
+#pragma warning disable BCL0015 // Diasable Pinvoke analyzer errors.
         private static unsafe class NativeMethods
         {
             // API sets available on modern platforms:
-            [DllImport(@"api-ms-win-core-file-l1-2-0.dll", EntryPoint = "ReadFile", ExactSpelling = true, SetLastError = true)]
+            [DllImport(@"api-ms-win-core-file-l1-1-0.dll", EntryPoint = "ReadFile", ExactSpelling = true, SetLastError = true)]
             [return: MarshalAs(UnmanagedType.Bool)]
             internal static extern bool ReadFileModern(
                  SafeHandle fileHandle,
@@ -160,5 +169,6 @@ namespace System.Reflection.Internal
                  IntPtr overlapped
             );
         }
+#pragma warning restore BCL0015
     }
 }

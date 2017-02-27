@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Reflection;
 
@@ -15,7 +16,7 @@ namespace Microsoft.CSharp.RuntimeBinder.Semantics
     // private.
     // ----------------------------------------------------------------------------
 
-    internal class EventSymbol : Symbol
+    internal sealed class EventSymbol : Symbol
     {
         public EventInfo AssociatedEventInfo;
 

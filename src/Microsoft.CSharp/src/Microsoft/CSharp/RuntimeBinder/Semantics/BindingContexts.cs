@@ -1,5 +1,6 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 namespace Microsoft.CSharp.RuntimeBinder.Semantics
 {
@@ -8,7 +9,7 @@ namespace Microsoft.CSharp.RuntimeBinder.Semantics
     // from the current one, but push on some new state.
     // ----------------------------------------------------------------------------
 
-    internal class CheckedContext : BindingContext
+    internal sealed class CheckedContext : BindingContext
     {
         public static CheckedContext CreateInstance(
             BindingContext parentCtx,
@@ -18,7 +19,7 @@ namespace Microsoft.CSharp.RuntimeBinder.Semantics
             return new CheckedContext(parentCtx, checkedNormal, checkedConstant);
         }
 
-        protected CheckedContext(
+        private CheckedContext(
                 BindingContext parentCtx,
                 bool checkedNormal,
                 bool checkedConstant

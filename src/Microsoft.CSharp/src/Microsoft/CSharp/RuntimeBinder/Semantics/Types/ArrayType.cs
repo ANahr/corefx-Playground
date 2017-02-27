@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 namespace Microsoft.CSharp.RuntimeBinder.Semantics
 {
@@ -7,7 +8,7 @@ namespace Microsoft.CSharp.RuntimeBinder.Semantics
     // ArrayType - a symbol representing an array.
     // ----------------------------------------------------------------------------
 
-    internal class ArrayType : CType
+    internal sealed class ArrayType : CType
     {
         // rank of the array. zero means unknown rank int [?].
         public int rank;

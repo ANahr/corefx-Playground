@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 //
 // =+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
@@ -9,12 +10,8 @@
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=--=-=-=-=-=-=-=-=-=-=-=-
 
 using Xunit;
-using CoreFXTestLibrary;
 
-using System;
-using System.Threading.Tasks;
-
-namespace System.Threading.Tasks.Test
+namespace System.Threading.Tasks.Tests
 {
     public sealed class ParallelInvokeTest
     {
@@ -26,7 +23,7 @@ namespace System.Threading.Tasks.Test
         private ActionType _actionType; // type of actions
 
         private Action[] _actions;
-        private double[] _results;  // global place to store the workload results for verication
+        private double[] _results;  // global place to store the workload results for verification
 
         #endregion
 
@@ -38,7 +35,7 @@ namespace System.Threading.Tasks.Test
             _actions = new Action[_count];
             _results = new double[_count];
 
-            // intialize actions 
+            // initialize actions 
             for (int i = 0; i < _count; i++)
             {
                 int iCopy = i;
@@ -92,7 +89,7 @@ namespace System.Threading.Tasks.Test
 
         #region Helper Methods
 
-        // calcuate 1 + 1/(2*2) + 1/(3*3) + ... +  1/(n*n) = Math.Pow (Math.PI, 2) / 6
+        // calculate 1 + 1/(2*2) + 1/(3*3) + ... +  1/(n*n) = Math.Pow (Math.PI, 2) / 6
         private static double ZetaSequence(int n)
         {
             double result = 0;

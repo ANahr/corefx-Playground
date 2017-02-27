@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Diagnostics;
 
@@ -18,10 +19,6 @@ namespace Microsoft.CSharp.RuntimeBinder.Semantics
         private Declaration _declFirst;
         private Declaration _declLast;
 
-        public NamespaceOrAggregateSymbol()
-        {
-        }
-
         // ----------------------------------------------------------------------------
         // NamespaceOrAggregateSymbol
         // ----------------------------------------------------------------------------
@@ -35,9 +32,9 @@ namespace Microsoft.CSharp.RuntimeBinder.Semantics
         public void AddDecl(Declaration decl)
         {
             Debug.Assert(decl != null);
-            Debug.Assert(this.IsNamespaceSymbol() || this.IsAggregateSymbol());
+            Debug.Assert(IsNamespaceSymbol() || IsAggregateSymbol());
             Debug.Assert(decl.IsNamespaceDeclaration() || decl.IsAggregateDeclaration());
-            Debug.Assert(!this.IsNamespaceSymbol() == !decl.IsNamespaceDeclaration());
+            Debug.Assert(!IsNamespaceSymbol() == !decl.IsNamespaceDeclaration());
 
             // If parent is set it should be set to us!
             Debug.Assert(decl.bag == null || decl.bag == this);
@@ -57,7 +54,7 @@ namespace Microsoft.CSharp.RuntimeBinder.Semantics
 #if DEBUG
                 // Validate our chain.
                 Declaration pdecl;
-                for (pdecl = _declFirst; pdecl != null && pdecl.declNext != null; pdecl = pdecl.declNext)
+                for (pdecl = _declFirst; pdecl?.declNext != null; pdecl = pdecl.declNext)
                 { }
                 Debug.Assert(pdecl == null || (pdecl == _declLast && pdecl.declNext == null));
 #endif

@@ -1,11 +1,12 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Diagnostics;
 
 namespace Microsoft.CSharp.RuntimeBinder.Semantics
 {
-    internal class ExprVisitorBase
+    internal abstract class ExprVisitorBase
     {
         public EXPR Visit(EXPR pExpr)
         {
@@ -30,7 +31,7 @@ namespace Microsoft.CSharp.RuntimeBinder.Semantics
 
         /////////////////////////////////////////////////////////////////////////////////
 
-        protected EXPRSTMT DispatchStatementList(EXPRSTMT expr)
+        private EXPRSTMT DispatchStatementList(EXPRSTMT expr)
         {
             Debug.Assert(expr != null);
 
@@ -54,11 +55,11 @@ namespace Microsoft.CSharp.RuntimeBinder.Semantics
 
                 if (pexpr == first)
                 {
-                    first = (result == null) ? null : result.asSTMT();
+                    first = result?.asSTMT();
                 }
                 else
                 {
-                    pexpr.SetOptionalNextStatement((result == null) ? null : result.asSTMT());
+                    pexpr.SetOptionalNextStatement(result?.asSTMT());
                 }
 
                 // A transformation may return back a list of statements (or
@@ -81,7 +82,7 @@ namespace Microsoft.CSharp.RuntimeBinder.Semantics
 
         /////////////////////////////////////////////////////////////////////////////////
 
-        protected bool IsCachedExpr(EXPR pExpr, out EXPR pTransformedExpr)
+        private bool IsCachedExpr(EXPR pExpr, out EXPR pTransformedExpr)
         {
             pTransformedExpr = null;
             return false;
@@ -89,7 +90,7 @@ namespace Microsoft.CSharp.RuntimeBinder.Semantics
 
         /////////////////////////////////////////////////////////////////////////////////
 
-        protected EXPR CacheExprMapping(EXPR pExpr, EXPR pTransformedExpr)
+        private EXPR CacheExprMapping(EXPR pExpr, EXPR pTransformedExpr)
         {
             return pTransformedExpr;
         }
@@ -264,7 +265,7 @@ namespace Microsoft.CSharp.RuntimeBinder.Semantics
                     throw Error.InternalCompilerError();
             }
         }
-        protected void VisitChildren(EXPR pExpr)
+        private void VisitChildren(EXPR pExpr)
         {
             Debug.Assert(pExpr != null);
 
@@ -555,7 +556,7 @@ namespace Microsoft.CSharp.RuntimeBinder.Semantics
                     must be a type or a namespace. This EXPR encapsulates that fact. The lhs member is the EXPR 
                     tree that was bound to resolve the type or namespace.
 
-                  TYPEORNAMESPACEERROR - This is the error class for the type or namespace exprs when we dont know
+                  TYPEORNAMESPACEERROR - This is the error class for the type or namespace exprs when we don't know
                     what to bind it to.
 
                   The following three exprs all have a TYPEORNAMESPACE child, which is their fundamental type:

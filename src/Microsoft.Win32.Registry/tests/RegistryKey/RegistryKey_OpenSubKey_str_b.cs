@@ -1,125 +1,77 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using Xunit;
-using Microsoft.Win32;
 using System;
-using System.Threading;
+using Xunit;
 
 namespace Microsoft.Win32.RegistryTests
 {
-    public class RegistryKey_OpenSubKey_str_b : IDisposable
+    public class RegistryKey_OpenSubKey_str_b : RegistryKeyOpenSubKeyTestsBase
     {
-        private RegistryKey _rk1, _rk2;
-        private String _testKeyName = "BCL_TEST_9";
-        private string _testStringName = "TestString";
-        private static int s_keyCount = 0;
-
-        public void TestInitialize()
+        [Fact]
+        public void NegativeTests()
         {
-            var counter = Interlocked.Increment(ref s_keyCount);
-            _testKeyName += counter.ToString();
-            _rk1 = Microsoft.Win32.Registry.CurrentUser;
-            if (_rk1.OpenSubKey(_testKeyName) != null)
-                _rk1.DeleteSubKeyTree(_testKeyName);
-            if (_rk1.GetValue(_testKeyName) != null)
-                _rk1.DeleteValue(_testKeyName);
-        }
+            // Should throw if passed subkey name is null
+            Assert.Throws<ArgumentNullException>(() => TestRegistryKey.OpenSubKey(name: null, writable: false));
 
-        public RegistryKey_OpenSubKey_str_b()
-        {
-            TestInitialize();
+            // Should throw if subkey name greater than 255 chars
+            Assert.Throws<ArgumentException>(() => TestRegistryKey.OpenSubKey(new string('a', 256), true));
+
+            // OpenSubKey should be read only
+            const string name = "FooBar";
+            TestRegistryKey.SetValue(name, 42);
+            TestRegistryKey.CreateSubKey(name);
+            using (var rk = Registry.CurrentUser.OpenSubKey(name: TestRegistryKeyName, writable: false))
+            {
+                Assert.Throws<UnauthorizedAccessException>(() => rk.CreateSubKey(name));
+                Assert.Throws<UnauthorizedAccessException>(() => rk.SetValue(name, "String"));
+                Assert.Throws<UnauthorizedAccessException>(() => rk.DeleteValue(name));
+                Assert.Throws<UnauthorizedAccessException>(() => rk.DeleteSubKey(name));
+                Assert.Throws<UnauthorizedAccessException>(() => rk.DeleteSubKeyTree(name));
+            }
+
+            // Should throw if RegistryKey closed
+            Assert.Throws<ObjectDisposedException>(() =>
+            {
+                TestRegistryKey.Dispose();
+                TestRegistryKey.OpenSubKey(TestRegistryKeyName, true);
+            });
         }
 
         [Fact]
-        public void Test01()
-        {
-            // [] Passing in null should throw ArgumentNullException
-
-            _rk1 = Microsoft.Win32.Registry.CurrentUser;
-            Action a = () => { _rk1.OpenSubKey(null, false); };
-            Assert.Throws<ArgumentNullException>(() => { a(); });
-        }
-
-        [Fact]
-        public void Test02()
-        {
-            // [] Should not be able to modify values when false is passed
-
-            _rk2 = _rk1.CreateSubKey(_testKeyName);
-            _rk2.SetValue(_testStringName, "TestValue");
-
-            _rk2 = _rk1.OpenSubKey(_testKeyName, false);
-            Action a = () => { _rk2.DeleteValue(_testStringName); };
-            Assert.Throws<UnauthorizedAccessException>(() => { a(); });
-        }
-
-        [Fact]
-        public void Test03()
+        public void OpenSubKeyTest()
         {
             // [] Should have write rights when true is passed
-
-            _rk2 = _rk1.CreateSubKey(_testKeyName);
-            if (_rk2.GetValue(_testStringName) != null)
+            const int testValue = 32;
+            using (var rk = TestRegistryKey.OpenSubKey("", true))
             {
-                Assert.False(true, "Error Value not deleted");
-            }
+                rk.CreateSubKey(TestRegistryKeyName);
+                rk.SetValue(TestRegistryKeyName, testValue);
 
-            _rk2 = _rk1.OpenSubKey("", true);
-            _rk2.SetValue(_testStringName, "Test");
-            if (!_rk1.GetValue(_testStringName).Equals("Test"))
-            {
-                Assert.False(true, "Error Value not set properly");
+                Assert.NotNull(rk.OpenSubKey(TestRegistryKeyName));
+                Assert.Equal(testValue, (int)rk.GetValue(TestRegistryKeyName));
             }
         }
 
-        [Fact]
-        public void Test04()
-        {
-            // [] Open one length subkey
+        [Theory]
+        [MemberData(nameof(TestRegistrySubKeyNames))]
+        public void OpenSubKey_Writable_KeyExists_OpensWithFixedUpName(string expected, string subKeyName) =>
+            Verify_OpenSubKey_KeyExists_OpensWithFixedUpName(expected, () => TestRegistryKey.OpenSubKey(subKeyName, writable: true));
 
-            _rk2 = _rk1.CreateSubKey(_testKeyName);
-            _rk2.SetValue("StringTest", "BeforeTest");
-            _rk2 = _rk1.OpenSubKey(_testKeyName, false);
-            Action a = () => { _rk2.SetValue("StringTest", "Test"); };
-            Assert.Throws<UnauthorizedAccessException>(() => { a(); });
-        }
+        [Theory]
+        [MemberData(nameof(TestRegistrySubKeyNames))]
+        public void OpenSubKey_NonWritable_KeyExists_OpensWithFixedUpName(string expected, string subKeyName) =>
+            Verify_OpenSubKey_KeyExists_OpensWithFixedUpName(expected, () => TestRegistryKey.OpenSubKey(subKeyName, writable: false));
 
-        [Fact]
-        public void Test05()
-        {
-            // [] Check that I can read
-            _rk2 = _rk1.CreateSubKey(_testKeyName);
-            _rk2.SetValue("StringTest", "BeforeTest");
-            if (!_rk2.GetValue("StringTest").Equals("BeforeTest"))
-            {
-                Assert.False(true, "Error Expected==BeforeTest , value==" + _rk2.GetValue("StringTest").ToString());
-            }
-        }
+        [Theory]
+        [MemberData(nameof(TestRegistrySubKeyNames))]
+        public void OpenSubKey_Writable_KeyDoesNotExist_ReturnsNull(string expected, string subKeyName) =>
+            Verify_OpenSubKey_KeyDoesNotExist_ReturnsNull(expected, () => TestRegistryKey.OpenSubKey(subKeyName, writable: true));
 
-        [Fact]
-        public void Test06()
-        {
-            // [] Same thing for true
-
-            _rk2 = _rk1.CreateSubKey(_testKeyName);
-            _rk2.SetValue(_testStringName, "BeforeTest");
-            _rk2 = _rk1.OpenSubKey(_testKeyName, true);
-            _rk2.SetValue(_testStringName, "Test");
-            if (!_rk2.GetValue(_testStringName).Equals("Test"))
-            {
-                Assert.False(true, "Error Incorrect value set");
-            }
-        }
-
-
-        public void Dispose()
-        {
-            _rk1 = Microsoft.Win32.Registry.CurrentUser;
-            if (_rk1.OpenSubKey(_testKeyName) != null)
-                _rk1.DeleteSubKeyTree(_testKeyName);
-            if (_rk1.GetValue(_testStringName) != null)
-                _rk1.DeleteValue(_testStringName);
-        }
+        [Theory]
+        [MemberData(nameof(TestRegistrySubKeyNames))]
+        public void OpenSubKey_NonWritable_KeyDoesNotExist_ReturnsNull(string expected, string subKeyName) =>
+            Verify_OpenSubKey_KeyDoesNotExist_ReturnsNull(expected, () => TestRegistryKey.OpenSubKey(subKeyName, writable: false));
     }
 }

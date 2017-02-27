@@ -1,12 +1,15 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Runtime.InteropServices;
 
+using Microsoft.Win32.SafeHandles;
+
 using CFStringRef = System.IntPtr;
 using CFArrayRef = System.IntPtr;
-using CFTimeInterval = System.Double;
+
 
 internal static partial class Interop
 {
@@ -43,7 +46,7 @@ internal static partial class Interop
         /// <returns>Returns a pointer to a CFString on success; otherwise, returns IntPtr.Zero</returns>
         /// <remarks>For *nix systems, the CLR maps ANSI to UTF-8, so be explicit about that</remarks>
         [DllImport(Interop.Libraries.CoreFoundationLibrary, CharSet = CharSet.Ansi)]
-        private static extern CFStringRef CFStringCreateWithCString(
+        private static extern SafeCreateHandle CFStringCreateWithCString(
             IntPtr allocator, 
             string str, 
             CFStringBuiltInEncodings encoding);
@@ -52,14 +55,14 @@ internal static partial class Interop
         /// Creates a CFStringRef from a 8-bit String object. Follows the "Create Rule" where if you create it, you delete it.
         /// </summary>
         /// <param name="str">The string to get a CFStringRef for</param>
-        /// <returns>Returns a pointer to a CFString on success; otherwise, returns IntPtr.Zero</returns>
-        internal static CFStringRef CFStringCreateWithCString(string str)
+        /// <returns>Returns a valid SafeCreateHandle to a CFString on success; otherwise, returns an invalid SafeCreateHandle</returns>
+        internal static SafeCreateHandle CFStringCreateWithCString(string str)
         {
             return CFStringCreateWithCString(IntPtr.Zero, str, CFStringBuiltInEncodings.kCFStringEncodingUTF8);
         }
 
         /// <summary>
-        /// Creates a pointer to an unmanaged CFArray containing the input values. Folows the "Create Rule" where if you create it, you delete it.
+        /// Creates a pointer to an unmanaged CFArray containing the input values. Follows the "Create Rule" where if you create it, you delete it.
         /// </summary>
         /// <param name="allocator">Should be IntPtr.Zero</param>
         /// <param name="values">The values to put in the array</param>
@@ -67,23 +70,33 @@ internal static partial class Interop
         /// <param name="callbacks">Should be IntPtr.Zero</param>
         /// <returns>Returns a pointer to a CFArray on success; otherwise, returns IntPtr.Zero</returns>
         [DllImport(Interop.Libraries.CoreFoundationLibrary)]
-        private static extern CFArrayRef CFArrayCreate(
+        private static extern SafeCreateHandle CFArrayCreate(
             IntPtr allocator,
             [MarshalAs(UnmanagedType.LPArray)]
             IntPtr[] values,
-            ulong numValues,
+            UIntPtr numValues,
             IntPtr callbacks);
 
         /// <summary>
-        /// Creates a pointer to an unmanaged CFArray containing the input values. Folows the "Create Rule" where if you create it, you delete it.
+        /// Creates a pointer to an unmanaged CFArray containing the input values. Follows the "Create Rule" where if you create it, you delete it.
         /// </summary>
         /// <param name="values">The values to put in the array</param>
         /// <param name="numValues">The number of values in the array</param>
-        /// <returns>Returns a pointer to a CFArray on success; otherwise, returns IntPtr.Zero</returns>
-        internal static CFArrayRef CFArrayCreate(IntPtr[] values, ulong numValues)
+        /// <returns>Returns a valid SafeCreateHandle to a CFArray on success; otherwise, returns an invalid SafeCreateHandle</returns>
+        internal static SafeCreateHandle CFArrayCreate(IntPtr[] values, UIntPtr numValues)
         {
             return CFArrayCreate(IntPtr.Zero, values, numValues, IntPtr.Zero);
         }
+
+        /// <summary>
+        /// You should retain a Core Foundation object when you receive it from elsewhere
+        /// (that is, you did not create or copy it) and you want it to persist. If you 
+        /// retain a Core Foundation object you are responsible for releasing it
+        /// </summary>
+        /// <param name="ptr">The CFType object to retain. This value must not be NULL</param>
+        /// <returns>The input value</param>
+        [DllImport(Interop.Libraries.CoreFoundationLibrary)]
+        internal extern static IntPtr CFRetain(IntPtr ptr);
 
         /// <summary>
         /// Decrements the reference count on the specified object and, if the ref count hits 0, cleans up the object.

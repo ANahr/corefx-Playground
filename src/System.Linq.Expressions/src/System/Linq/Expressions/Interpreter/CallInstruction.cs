@@ -1,7 +1,7 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -19,10 +19,8 @@ namespace System.Linq.Expressions.Interpreter
         #region Construction
 
         internal CallInstruction() { }
-        public override string InstructionName
-        {
-            get { return "Call"; }
-        }
+
+        public override string InstructionName => "Call";
 
 #if FEATURE_DLG_INVOKE
         private static readonly Dictionary<MethodInfo, CallInstruction> _cache = new Dictionary<MethodInfo, CallInstruction>();
@@ -30,7 +28,7 @@ namespace System.Linq.Expressions.Interpreter
 
         public static CallInstruction Create(MethodInfo info)
         {
-            return Create(info, info.GetParameters());
+            return Create(info, info.GetParametersCached());
         }
 
         /// <summary>
@@ -51,17 +49,17 @@ namespace System.Linq.Expressions.Interpreter
                 return GetArrayAccessor(info, argumentCount);
             }
 
+#if !FEATURE_DLG_INVOKE
             return new MethodInfoCallInstruction(info, argumentCount);
-#if FEATURE_DLG_INVOKE
-
-            if (!info.IsStatic && info.DeclaringType.GetTypeInfo().IsValueType)
+#else
+            if (!info.IsStatic && info.DeclaringType.IsValueType)
             {
                 return new MethodInfoCallInstruction(info, argumentCount);
             }
 
             if (argumentCount >= MaxHelpers)
             {
-                // no delegate for this size, fallback to reflection invoke
+                // no delegate for this size, fall back to reflection invoke
                 return new MethodInfoCallInstruction(info, argumentCount);
             }
 
@@ -87,7 +85,7 @@ namespace System.Linq.Expressions.Interpreter
                 }
             }
 
-            // create it 
+            // create it
             try
             {
 #if FEATURE_FAST_CREATE
@@ -112,9 +110,9 @@ namespace System.Linq.Expressions.Interpreter
             }
             catch (NotSupportedException)
             {
-                // if Delegate.CreateDelegate can't handle the method fallback to 
-                // the slow reflection version.  For example this can happen w/ 
-                // a generic method defined on an interface and implemented on a class or 
+                // if Delegate.CreateDelegate can't handle the method fall back to
+                // the slow reflection version.  For example this can happen w/
+                // a generic method defined on an interface and implemented on a class or
                 // a virtual generic method.
                 res = new MethodInfoCallInstruction(info, argumentCount);
             }
@@ -136,29 +134,35 @@ namespace System.Linq.Expressions.Interpreter
         {
             Type arrayType = info.DeclaringType;
             bool isGetter = info.Name == "Get";
+            MethodInfo alternativeMethod = null;
+
             switch (arrayType.GetArrayRank())
             {
                 case 1:
-                    return Create(isGetter ?
+                    alternativeMethod = isGetter ?
                         arrayType.GetMethod("GetValue", new[] { typeof(int) }) :
-                        typeof(CallInstruction).GetMethod("ArrayItemSetter1")
-                    );
+                        typeof(CallInstruction).GetMethod(nameof(ArrayItemSetter1));
+                    break;
 
                 case 2:
-                    return Create(isGetter ?
+                    alternativeMethod = isGetter ?
                         arrayType.GetMethod("GetValue", new[] { typeof(int), typeof(int) }) :
-                        typeof(CallInstruction).GetMethod("ArrayItemSetter2")
-                    );
+                        typeof(CallInstruction).GetMethod(nameof(ArrayItemSetter2));
+                    break;
 
                 case 3:
-                    return Create(isGetter ?
+                    alternativeMethod = isGetter ?
                         arrayType.GetMethod("GetValue", new[] { typeof(int), typeof(int), typeof(int) }) :
-                        typeof(CallInstruction).GetMethod("ArrayItemSetter3")
-                    );
-
-                default:
-                    return new MethodInfoCallInstruction(info, argumentCount);
+                        typeof(CallInstruction).GetMethod(nameof(ArrayItemSetter3));
+                    break;
             }
+
+            if ((object)alternativeMethod == null)
+            {
+                return new MethodInfoCallInstruction(info, argumentCount);
+            }
+
+            return Create(alternativeMethod);
         }
 
         public static void ArrayItemSetter1(Array array, int index0, object value)
@@ -182,6 +186,7 @@ namespace System.Linq.Expressions.Interpreter
         }
 #endif
 
+#if FEATURE_FAST_CREATE
         /// <summary>
         /// Gets the next type or null if no more types are available.
         /// </summary>
@@ -216,7 +221,9 @@ namespace System.Linq.Expressions.Interpreter
         {
             return pi.Length != index || (pi.Length == index && !target.IsStatic);
         }
+#endif
 
+#if FEATURE_DLG_INVOKE
         /// <summary>
         /// Uses reflection to create new instance of the appropriate ReflectedCaller
         /// </summary>
@@ -240,29 +247,66 @@ namespace System.Linq.Expressions.Interpreter
             }
             catch (TargetInvocationException e)
             {
-                throw ExceptionHelpers.UpdateForRethrow(e.InnerException);
+                ExceptionHelpers.UnwrapAndRethrow(e);
+                throw ContractUtils.Unreachable;
             }
         }
+#endif
 
         #endregion
 
         #region Instruction
 
-        public override int ConsumedStack { get { return ArgumentCount; } }
+        public override int ConsumedStack => ArgumentCount;
 
-        public override string ToString()
-        {
-            return "Call()";
-        }
+        public override string ToString() => "Call()";
+
         #endregion
+
+        /// <summary>
+        /// If the target of invocation happens to be a delegate
+        /// over enclosed instance lightLambda, return that instance.
+        /// We can interpret LightLambdas directly.
+        /// </summary>
+        protected static bool TryGetLightLambdaTarget(object instance, out LightLambda lightLambda)
+        {
+            var del = instance as Delegate;
+            if ((object)del != null)
+            {
+                var thunk = del.Target as Func<object[], object>;
+                if ((object)thunk != null)
+                {
+                    lightLambda = thunk.Target as LightLambda;
+                    if (lightLambda != null)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            lightLambda = null;
+            return false;
+        }
+
+        protected object InterpretLambdaInvoke(LightLambda targetLambda, object[] args)
+        {
+            if (ProducedStack > 0)
+            {
+                return targetLambda.Run(args);
+            }
+            else
+            {
+                return targetLambda.RunVoid(args);
+            }
+        }
     }
 
-    internal partial class MethodInfoCallInstruction : CallInstruction
+    internal class MethodInfoCallInstruction : CallInstruction
     {
-        private readonly MethodInfo _target;
-        private readonly int _argumentCount;
+        protected readonly MethodInfo _target;
+        protected readonly int _argumentCount;
 
-        public override int ArgumentCount { get { return _argumentCount; } }
+        public override int ArgumentCount => _argumentCount;
 
         internal MethodInfoCallInstruction(MethodInfo target, int argumentCount)
         {
@@ -270,93 +314,53 @@ namespace System.Linq.Expressions.Interpreter
             _argumentCount = argumentCount;
         }
 
-        public override int ProducedStack { get { return _target.ReturnType == typeof(void) ? 0 : 1; } }
-
-        public override object Invoke(params object[] args)
-        {
-            return InvokeWorker(args);
-        }
-        public override object Invoke()
-        {
-            return InvokeWorker();
-        }
-        public override object Invoke(object arg0)
-        {
-            return InvokeWorker(arg0);
-        }
-        public override object Invoke(object arg0, object arg1)
-        {
-            return InvokeWorker(arg0, arg1);
-        }
-
-        public override object InvokeInstance(object instance, params object[] args)
-        {
-            if (_target.IsStatic)
-            {
-                try
-                {
-                    return _target.Invoke(null, args);
-                }
-                catch (TargetInvocationException e)
-                {
-                    throw ExceptionHelpers.UpdateForRethrow(e.InnerException);
-                }
-            }
-
-            try
-            {
-                return _target.Invoke(instance, args);
-            }
-            catch (TargetInvocationException e)
-            {
-                throw ExceptionHelpers.UpdateForRethrow(e.InnerException);
-            }
-        }
-
-        private object InvokeWorker(params object[] args)
-        {
-            if (_target.IsStatic)
-            {
-                try
-                {
-                    return _target.Invoke(null, args);
-                }
-                catch (TargetInvocationException e)
-                {
-                    throw ExceptionHelpers.UpdateForRethrow(e.InnerException);
-                }
-            }
-
-            try
-            {
-                return _target.Invoke(args[0], GetNonStaticArgs(args));
-            }
-            catch (TargetInvocationException e)
-            {
-                throw ExceptionHelpers.UpdateForRethrow(e.InnerException);
-            }
-        }
-
-        private static object[] GetNonStaticArgs(object[] args)
-        {
-            object[] newArgs = new object[args.Length - 1];
-            for (int i = 0; i < newArgs.Length; i++)
-            {
-                newArgs[i] = args[i + 1];
-            }
-            return newArgs;
-        }
+        public override int ProducedStack => _target.ReturnType == typeof(void) ? 0 : 1;
 
         public override int Run(InterpretedFrame frame)
         {
             int first = frame.StackIndex - _argumentCount;
-            object[] args = new object[_argumentCount];
-            for (int i = 0; i < args.Length; i++)
+
+            object ret;
+            if (_target.IsStatic)
             {
-                args[i] = frame.Data[first + i];
+                object[] args = GetArgs(frame, first, 0);
+                try
+                {
+                    ret = _target.Invoke(null, args);
+                }
+                catch (TargetInvocationException e)
+                {
+                    ExceptionHelpers.UnwrapAndRethrow(e);
+                    throw ContractUtils.Unreachable;
+                }
+            }
+            else
+            {
+                object instance = frame.Data[first];
+                NullCheck(instance);
+
+                object[] args = GetArgs(frame, first, 1);
+
+                LightLambda targetLambda;
+                if (TryGetLightLambdaTarget(instance, out targetLambda))
+                {
+                    // no need to Invoke, just interpret the lambda body
+                    ret = InterpretLambdaInvoke(targetLambda, args);
+                }
+                else
+                {
+                    try
+                    {
+                        ret = _target.Invoke(instance, args);
+                    }
+                    catch (TargetInvocationException e)
+                    {
+                        ExceptionHelpers.UnwrapAndRethrow(e);
+                        throw ContractUtils.Unreachable;
+                    }
+                }
             }
 
-            object ret = Invoke(args);
             if (_target.ReturnType != typeof(void))
             {
                 frame.Data[first] = ret;
@@ -366,65 +370,92 @@ namespace System.Linq.Expressions.Interpreter
             {
                 frame.StackIndex = first;
             }
+
             return 1;
         }
+
+        protected object[] GetArgs(InterpretedFrame frame, int first, int skip)
+        {
+            int count = _argumentCount - skip;
+
+            if (count > 0)
+            {
+                var args = new object[count];
+
+                for (int i = 0; i < args.Length; i++)
+                {
+                    args[i] = frame.Data[first + i + skip];
+                }
+
+                return args;
+            }
+            else
+            {
+                return Array.Empty<object>();
+            }
+        }
+
+        public override string ToString() => "Call(" + _target + ")";
     }
 
-    internal partial class ByRefMethodInfoCallInstruction : CallInstruction
+    internal class ByRefMethodInfoCallInstruction : MethodInfoCallInstruction
     {
         private readonly ByRefUpdater[] _byrefArgs;
-        private readonly MethodInfo _target;
-        private readonly int _argumentCount;
-
-        public override int ArgumentCount { get { return _argumentCount; } }
 
         internal ByRefMethodInfoCallInstruction(MethodInfo target, int argumentCount, ByRefUpdater[] byrefArgs)
+            : base(target, argumentCount)
         {
-            _target = target;
-            _argumentCount = argumentCount;
             _byrefArgs = byrefArgs;
         }
 
-        public override int ProducedStack { get { return (_target.ReturnType == typeof(void) ? 0 : 1); } }
+        public override int ProducedStack => _target.ReturnType == typeof(void) ? 0 : 1;
 
         public sealed override int Run(InterpretedFrame frame)
         {
             int first = frame.StackIndex - _argumentCount;
             object[] args = null;
             object instance = null;
+
             try
             {
                 object ret;
                 if (_target.IsStatic)
                 {
-                    args = new object[_argumentCount];
-                    for (int i = 0; i < args.Length; i++)
-                    {
-                        args[i] = frame.Data[first + i];
-                    }
+                    args = GetArgs(frame, first, 0);
                     try
                     {
                         ret = _target.Invoke(null, args);
                     }
                     catch (TargetInvocationException e)
                     {
-                        throw ExceptionHelpers.UpdateForRethrow(e.InnerException);
+                        ExceptionHelpers.UnwrapAndRethrow(e);
+                        throw ContractUtils.Unreachable;
                     }
                 }
                 else
                 {
-                    args = new object[_argumentCount - 1];
-                    for (int i = 0; i < args.Length; i++)
+                    instance = frame.Data[first];
+                    NullCheck(instance);
+
+                    args = GetArgs(frame, first, 1);
+
+                    LightLambda targetLambda;
+                    if (TryGetLightLambdaTarget(instance, out targetLambda))
                     {
-                        args[i] = frame.Data[first + i + 1];
+                        // no need to Invoke, just interpret the lambda body
+                        ret = InterpretLambdaInvoke(targetLambda, args);
                     }
-                    try
+                    else
                     {
-                        ret = _target.Invoke(instance = frame.Data[first], args);
-                    }
-                    catch (TargetInvocationException e)
-                    {
-                        throw ExceptionHelpers.UpdateForRethrow(e.InnerException);
+                        try
+                        {
+                            ret = _target.Invoke(instance, args);
+                        }
+                        catch (TargetInvocationException e)
+                        {
+                            ExceptionHelpers.UnwrapAndRethrow(e);
+                            throw ContractUtils.Unreachable;
+                        }
                     }
                 }
 
@@ -442,18 +473,11 @@ namespace System.Linq.Expressions.Interpreter
             {
                 if (args != null)
                 {
-                    foreach (var arg in _byrefArgs)
+                    foreach (ByRefUpdater arg in _byrefArgs)
                     {
-                        if (arg.ArgumentIndex == -1)
-                        {
-                            // instance param, just copy back the exact instance invoked with, which 
-                            // gets passed by reference from reflection for value types.
-                            arg.Update(frame, instance);
-                        }
-                        else
-                        {
-                            arg.Update(frame, args[arg.ArgumentIndex]);
-                        }
+                        // -1: instance param, just copy back the exact instance invoked with, which
+                        // gets passed by reference from reflection for value types.
+                        arg.Update(frame, arg.ArgumentIndex == -1 ? instance : args[arg.ArgumentIndex]);
                     }
                 }
             }

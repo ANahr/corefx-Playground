@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 namespace System.ComponentModel.DataAnnotations
 {
@@ -10,7 +11,7 @@ namespace System.ComponentModel.DataAnnotations
     /// <remarks>
     ///     This attribute neither enforces nor guarantees editability; the underlying data
     ///     store might allow changing the data regardless of this attribute.  The presence
-    ///     of this attribute signals intent to the consumer of the attribute whethere or not
+    ///     of this attribute signals intent to the consumer of the attribute whether or not
     ///     the end user should be allowed to change the value via the client application.
     /// </remarks>
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property, AllowMultiple = false, Inherited = true)]

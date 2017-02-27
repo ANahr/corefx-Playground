@@ -1,143 +1,126 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using System;
-using System.Runtime.CompilerServices;
-using System.IO;
-using System.Text;
+using System.Runtime.InteropServices;
 using Xunit;
 
-public class FileInfo_Exists
+namespace System.IO.Tests
 {
-    public static String s_strDtTmVer = "2001/02/03 19:50";
-    public static String s_strClassMethod = "FileInfo.Exists()";
-    public static String s_strTFName = "Exists.cs";
-    public static String s_strTFPath = Directory.GetCurrentDirectory();
-
-    [Fact]
-    public static void runTest()
+    public class FileInfo_Exists : FileSystemTest
     {
-        int iCountErrors = 0;
-        int iCountTestcases = 0;
-        String strLoc = "Loc_000oo";
-
-        try
+        [Fact]
+        public void InitializeExistsBeforeCreation()
         {
-            String filName = Path.Combine(TestInfo.CurrentDirectory, Path.GetRandomFileName());
-            FileInfo fil2;
-
-
-            if (File.Exists(filName))
-                File.Delete(filName);
-
-
-            // [] Current Directory
-            strLoc = "Loc_276t8";
-
-            iCountTestcases++;
-            fil2 = new FileInfo(".");
-            if (fil2.Exists)
-            {
-                iCountErrors++;
-                printerr("Error_95428! Incorrect return value");
-            }
-
-            iCountTestcases++;
-            fil2 = new FileInfo(Directory.GetCurrentDirectory());
-            if (fil2.Exists)
-            {
-                iCountErrors++;
-                printerr("Error_97t67! Incorrect return value");
-            }
-
-            // [] Non-existent file
-            strLoc = "Loc_t993c";
-            try
-            {
-                iCountTestcases++;
-                fil2 = new FileInfo(Path.Combine(TestInfo.CurrentDirectory, Path.GetRandomFileName()));
-                if (fil2.Exists)
-                {
-                    iCountErrors++;
-                    printerr("Error_6895b! Incorrect return value");
-                }
-            }
-            catch (Exception exc)
-            {
-                iCountErrors++;
-                printerr("Error_1y908! Unexpected exception, exc==" + exc.ToString());
-            }
-
-            // [] File that does exist
-            strLoc = "Loc_2y78g";
-
-            new FileStream(filName, FileMode.Create).Dispose();
-            fil2 = new FileInfo(filName);
-            iCountTestcases++;
-            if (!fil2.Exists)
-            {
-                iCountErrors++;
-                printerr("Error_9t821! Returned false for existing file");
-            }
-
-            File.Delete(filName);
-
-            // [] Filename with spaces
-            strLoc = "Loc_298g7";
-
-            String tmp = Path.ChangeExtension(filName, "   space space space" + Path.GetExtension(filName));
-            new FileStream(tmp, FileMode.Create).Dispose();
-            fil2 = new FileInfo(tmp);
-            iCountTestcases++;
-            if (!fil2.Exists)
-            {
-                iCountErrors++;
-                printerr("Error_01y8v! Returned incorrect value");
-            }
-            fil2.Delete();
-
-            // [] Wildcards in filename should return false
-
-            strLoc = "Loc_398vy8";
-            iCountTestcases++;
-            try
-            {
-                fil2 = new FileInfo("*");
-                if (fil2.Exists)
-                {
-                    iCountErrors++;
-                    printerr("Error_4979c! File with wildcard exists: " + fil2.FullName);
-                }
-            }
-            catch (ArgumentException)
-            {
-            }
-            catch (Exception exc)
-            {
-                iCountErrors++;
-                printerr("Error_498u9! Unexpected exception thrown, exc==" + exc.ToString());
-            }
-
-            if (File.Exists(filName))
-                File.Delete(filName);
-        }
-        catch (Exception exc_general)
-        {
-            ++iCountErrors;
-            Console.WriteLine("Error Err_8888yyy!  strLoc==" + strLoc + ", exc_general==" + exc_general.ToString());
-        }
-        ////  Finish Diagnostics
-        if (iCountErrors != 0)
-        {
-            Console.WriteLine("FAiL! " + s_strTFName + " ,iCountErrors==" + iCountErrors.ToString());
+            string fileName = GetTestFilePath();
+            FileInfo di = new FileInfo(fileName);
+            // don't check it, data has not yet been init'ed
+            File.Create(fileName).Dispose();
+            // data will be init'ed at the time of calling exists
+            Assert.True(di.Exists);
         }
 
-        Assert.Equal(0, iCountErrors);
-    }
+        [Fact]
+        public void InitializeExistsAfterCreation()
+        {
+            string fileName = GetTestFilePath();
+            FileInfo di = new FileInfo(fileName);
 
-    public static void printerr(String err, [CallerMemberName] string memberName = "", [CallerFilePath] string filePath = "", [CallerLineNumber] int lineNumber = 0)
-    {
-        Console.WriteLine("ERROR: ({0}, {1}, {2}) {3}", memberName, filePath, lineNumber, err);
+            Assert.False(di.Exists);
+            File.Create(fileName).Dispose();
+
+            // data should be stale
+            Assert.False(di.Exists);
+
+            // force refresh
+            di.Refresh();
+            Assert.True(di.Exists);
+        }
+
+        [Fact]
+        public void NonExistentFile()
+        {
+            Assert.False(new FileInfo("Da drar vi til fjells").Exists);
+        }
+
+        [Fact]
+        [PlatformSpecific(CaseInsensitivePlatforms)]
+        public void CaseInsensitivity()
+        {
+            string path = GetTestFilePath();
+            File.Create(path).Dispose();
+            Assert.True(new FileInfo(path.ToUpperInvariant()).Exists);
+            Assert.True(new FileInfo(path.ToLowerInvariant()).Exists);
+        }
+
+        [Fact]
+        [PlatformSpecific(CaseSensitivePlatforms)]
+        public void CaseSensitivity()
+        {
+            string path = GetTestFilePath();
+            File.Create(path).Dispose();
+            Assert.False(new FileInfo(path.ToUpperInvariant()).Exists);
+            Assert.False(new FileInfo(path.ToLowerInvariant()).Exists);
+        }
+
+        [Fact]
+        public void TrueForNewFileInfo()
+        {
+            string fileName = GetTestFilePath();
+            File.Create(fileName).Dispose();
+
+            FileInfo di = new FileInfo(fileName);
+            Assert.True(di.Exists);
+        }
+
+        [Fact]
+        public void FalseForDirectory()
+        {
+            string fileName = GetTestFilePath();
+            Directory.CreateDirectory(fileName);
+            FileInfo di = new FileInfo(fileName);
+            Assert.False(di.Exists);
+        }
+
+        [Fact]
+        [PlatformSpecific(TestPlatforms.AnyUnix)]  // Uses P/Invokes
+        public void TrueForNonRegularFile()
+        {
+            string fileName = GetTestFilePath();
+            Assert.Equal(0, mkfifo(fileName, 0));
+            FileInfo fi = new FileInfo(fileName);
+            Assert.True(fi.Exists);
+        }
+
+        [ConditionalFact(nameof(CanCreateSymbolicLinks))]
+        public void SymLinksMayExistIndependentlyOfTarget()
+        {
+            var path = GetTestFilePath();
+            var linkPath = GetTestFilePath();
+
+            var pathFI = new FileInfo(path);
+            var linkPathFI = new FileInfo(linkPath);
+
+            pathFI.Create().Dispose();
+            Assert.True(MountHelper.CreateSymbolicLink(linkPath, path, isDirectory: false));
+
+            // Both the symlink and the target exist
+            pathFI.Refresh();
+            linkPathFI.Refresh();
+            Assert.True(pathFI.Exists, "path should exist");
+            Assert.True(linkPathFI.Exists, "linkPath should exist");
+
+            // Delete the target.  The symlink should still exist
+            pathFI.Delete();
+            pathFI.Refresh();
+            linkPathFI.Refresh();
+            Assert.False(pathFI.Exists, "path should now not exist");
+            Assert.True(linkPathFI.Exists, "linkPath should still exist");
+
+            // Now delete the symlink.
+            linkPathFI.Delete();
+            linkPathFI.Refresh();
+            Assert.False(linkPathFI.Exists, "linkPath should no longer exist");
+        }
     }
 }
-

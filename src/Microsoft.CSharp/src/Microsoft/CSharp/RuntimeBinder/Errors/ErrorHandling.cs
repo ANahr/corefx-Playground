@@ -1,5 +1,6 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Diagnostics;
@@ -18,11 +19,11 @@ namespace Microsoft.CSharp.RuntimeBinder.Errors
     // must be deferred, thus causing the error formatting/reporting subsystem to understand a 
     // whole host of types, many of which may not be relevant to the EE. 
 
-    internal class ErrorHandling
+    internal sealed class ErrorHandling
     {
-        private IErrorSink _errorSink;
-        private UserStringBuilder _userStringBuilder;
-        private CErrorFactory _errorFactory;
+        private readonly IErrorSink _errorSink;
+        private readonly UserStringBuilder _userStringBuilder;
+        private readonly CErrorFactory _errorFactory;
 
         // By default these DO NOT add related locations. To add a related location, pass an ErrArgRef.
         public void Error(ErrorCode id, params ErrArg[] args)
@@ -43,23 +44,20 @@ namespace Microsoft.CSharp.RuntimeBinder.Errors
 
         public void SubmitError(CParameterizedError error)
         {
-            if (_errorSink != null)
-            {
-                _errorSink.SubmitError(error);
-            }
+            _errorSink?.SubmitError(error);
         }
 
-        public void MakeErrorLocArgs(out CParameterizedError error, ErrorCode id, ErrArg[] prgarg)
+        private void MakeErrorLocArgs(out CParameterizedError error, ErrorCode id, ErrArg[] prgarg)
         {
             error = new CParameterizedError();
             error.Initialize(id, prgarg);
         }
 
-        public virtual void AddRelatedSymLoc(CParameterizedError err, Symbol sym)
+        public void AddRelatedSymLoc(CParameterizedError err, Symbol sym)
         {
         }
 
-        public virtual void AddRelatedTypeLoc(CParameterizedError err, CType pType)
+        public void AddRelatedTypeLoc(CParameterizedError err, CType pType)
         {
         }
 
@@ -158,7 +156,7 @@ namespace Microsoft.CSharp.RuntimeBinder.Errors
             {
                 // Copy the strings over to another buffer.
                 string[] prgpszNew = new string[cpsz];
-                Array.Copy(prgpsz, 0, prgpszNew, 0, cpsz); ;
+                Array.Copy(prgpsz, 0, prgpszNew, 0, cpsz);
 
                 for (int i = 0; i < cpsz; i++)
                 {

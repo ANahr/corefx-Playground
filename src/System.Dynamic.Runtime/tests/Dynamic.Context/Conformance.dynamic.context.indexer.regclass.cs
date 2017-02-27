@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using Xunit;
 
@@ -1210,7 +1211,7 @@ namespace ManagedTests.DynamicCSharp.Conformance.dynamic.context.indexer.regclas
         }
     }
 
-    static public class Extension
+    public static class Extension
     {
         public static Test ExReturnTest(this MyEnum me)
         {
@@ -1752,7 +1753,7 @@ namespace ManagedTests.DynamicCSharp.Conformance.dynamic.context.indexer.regclas
         private static int s_a = 0;
         private static MemberClass s_mc = new MemberClass();
 
-        [Fact(Skip = "870811")]
+        
         public static void DynamicCSharpRunTest()
         {
             Assert.Equal(0, MainMethod());
@@ -2315,10 +2316,8 @@ namespace ManagedTests.DynamicCSharp.Conformance.dynamic.context.indexer.regclas
 
                 memberClassStatus = MemberClass.Status;
             }
-        }
 
-        public void Foo()
-        {
+            Assert.Equal(0, Verify());
         }
 
         private static int Verify()
@@ -2344,23 +2343,19 @@ namespace ManagedTests.DynamicCSharp.Conformance.dynamic.context.indexer.regclas
         private static void RequireLifetimesEnded()
         {
             Test t = new Test();
-            t.Foo();
             Test.s_field = null;
+            // should finalize only after s_field is set to null.
+            GC.KeepAlive(t);
         }
 
         [Fact]
         public static void DynamicCSharpRunTest()
         {
-            Assert.Equal(0, MainMethod());
-        }
-
-        public static int MainMethod()
-        {
             RequireLifetimesEnded();
             GC.Collect();
             GC.WaitForPendingFinalizers();
-            // If move the code in Verify() to here, the finalizer will only be executed after exited Main
-            return Verify();
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
         }
     }
     //</Code>
@@ -2393,8 +2388,7 @@ namespace ManagedTests.DynamicCSharp.Conformance.dynamic.context.indexer.regclas
             MemberClass mc = new MemberClass();
             dynamic dynamic = mc;
             object[] array = dynamic[true, 10, dynamic];
-            if (!dynamic.GetType().IsClass) // struct == struct not support.
-                return 0;
+
             if (array.Length == 3 && (bool?)array[0] == true && (int?)array[1] == 10 && array[2] == dynamic && MemberClass.Status == 1)
                 return 0;
             return 1;
@@ -2441,7 +2435,7 @@ namespace ManagedTests.DynamicCSharp.Conformance.dynamic.context.indexer.regclas
         }
     }
 
-    static public class Extension
+    public static class Extension
     {
         public static char Method(this char? c)
         {

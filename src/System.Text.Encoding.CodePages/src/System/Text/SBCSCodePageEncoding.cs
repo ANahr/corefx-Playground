@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.IO;
@@ -12,7 +13,7 @@ using System.Security;
 
 namespace System.Text
 {
-    // SBCSCodePageEncoding
+    [Serializable]
     internal class SBCSCodePageEncoding : BaseCodePageEncoding
     {
         // Pointers to our memory section parts
@@ -37,6 +38,28 @@ namespace System.Text
         {
         }
 
+        // Method assumes that memory pointer is aligned
+        private static unsafe void ZeroMemAligned(byte* buffer, int count)
+        {
+            long* pLong = (long*)buffer;
+            long* pLongEnd = (long*)(buffer + count - sizeof(long));
+
+            while (pLong < pLongEnd)
+            {
+                *pLong = 0;
+                pLong++;
+            }
+
+            byte* pByte = (byte*)pLong;
+            byte* pEnd = buffer + count;
+
+            while (pByte < pEnd)
+            {
+                *pByte = 0;
+                pByte++;
+            }
+        }
+
         // We have a managed code page entry, so load our tables
         // SBCS data section looks like:
         //
@@ -52,7 +75,9 @@ namespace System.Text
         [System.Security.SecurityCritical]  // auto-generated
         protected override unsafe void LoadManagedCodePage()
         {
-            fixed (byte* pBytes = m_codePageHeader)
+            Debug.Assert(m_codePageHeader?.Length > 0);
+
+            fixed (byte* pBytes = &m_codePageHeader[0])
             {
                 CodePageHeader* pCodePage = (CodePageHeader*)pBytes;
                 // Should be loading OUR code page
@@ -69,10 +94,15 @@ namespace System.Text
 
                 // Get our mapped section 65536 bytes for unicode->bytes, 256 * 2 bytes for bytes->unicode
                 // Plus 4 byte to remember CP # when done loading it. (Don't want to get IA64 or anything out of alignment)
-                byte* pNativeMemory = GetNativeMemory(65536 * 1 + 256 * 2 + 4 + iExtraBytes);
+                const int UnicodeToBytesMappingSize = 65536;
+                const int BytesToUnicodeMappingSize = 256 * 2;
+                const int CodePageNumberSize = 4;
+                int bytesToAllocate = UnicodeToBytesMappingSize + BytesToUnicodeMappingSize + CodePageNumberSize + iExtraBytes;
+                byte* pNativeMemory = GetNativeMemory(bytesToAllocate);
+                ZeroMemAligned(pNativeMemory, bytesToAllocate);
 
-                _mapBytesToUnicode = (char*)pNativeMemory;
-                _mapUnicodeToBytes = (byte*)(pNativeMemory + 256 * 2);
+                char* mapBytesToUnicode = (char*)pNativeMemory;
+                byte* mapUnicodeToBytes = (byte*)(pNativeMemory + 256 * 2);
 
                 // Need to read our data file and fill in our section.
                 // WARNING: Multiple code pieces could do this at once (so we don't have to lock machine-wide)
@@ -88,7 +118,7 @@ namespace System.Text
                     s_codePagesEncodingDataStream.Read(buffer, 0, buffer.Length);
                 }
 
-                fixed (byte* pBuffer = buffer)
+                fixed (byte* pBuffer = &buffer[0])
                 {
                     char* pTemp = (char*)pBuffer;
                     for (int b = 0; b < 256; b++)
@@ -96,17 +126,20 @@ namespace System.Text
                         // Don't want to force 0's to map Unicode wrong.  0 byte == 0 unicode already taken care of
                         if (pTemp[b] != 0 || b == 0)
                         {
-                            _mapBytesToUnicode[b] = pTemp[b];
+                            mapBytesToUnicode[b] = pTemp[b];
 
                             if (pTemp[b] != UNKNOWN_CHAR)
-                                _mapUnicodeToBytes[pTemp[b]] = (byte)b;
+                                mapUnicodeToBytes[pTemp[b]] = (byte)b;
                         }
                         else
                         {
-                            _mapBytesToUnicode[b] = UNKNOWN_CHAR;
+                            mapBytesToUnicode[b] = UNKNOWN_CHAR;
                         }
                     }
                 }
+                
+                _mapBytesToUnicode = mapBytesToUnicode;
+                _mapUnicodeToBytes = mapUnicodeToBytes;
             }
         }
 
@@ -821,7 +854,8 @@ namespace System.Text
             byte[] byteBuffer = new byte[1];
             char* charEnd = chars + charCount;
 
-            DecoderFallbackBufferHelper fallbackHelper = new DecoderFallbackBufferHelper(decoder.FallbackBuffer);
+            DecoderFallbackBufferHelper fallbackHelper = new DecoderFallbackBufferHelper(
+                decoder != null ? decoder.FallbackBuffer : DecoderFallback.CreateFallbackBuffer());
 
             // Not quite so fast loop
             while (bytes < byteEnd)
@@ -891,7 +925,7 @@ namespace System.Text
         public override int GetMaxByteCount(int charCount)
         {
             if (charCount < 0)
-                throw new ArgumentOutOfRangeException("charCount", SR.ArgumentOutOfRange_NeedNonNegNum);
+                throw new ArgumentOutOfRangeException(nameof(charCount), SR.ArgumentOutOfRange_NeedNonNegNum);
             Contract.EndContractBlock();
 
             // Characters would be # of characters + 1 in case high surrogate is ? * max fallback
@@ -903,14 +937,14 @@ namespace System.Text
             // 1 to 1 for most characters.  Only surrogates with fallbacks have less.
 
             if (byteCount > 0x7fffffff)
-                throw new ArgumentOutOfRangeException("charCount", SR.ArgumentOutOfRange_GetByteCountOverflow);
+                throw new ArgumentOutOfRangeException(nameof(charCount), SR.ArgumentOutOfRange_GetByteCountOverflow);
             return (int)byteCount;
         }
 
         public override int GetMaxCharCount(int byteCount)
         {
             if (byteCount < 0)
-                throw new ArgumentOutOfRangeException("byteCount", SR.ArgumentOutOfRange_NeedNonNegNum);
+                throw new ArgumentOutOfRangeException(nameof(byteCount), SR.ArgumentOutOfRange_NeedNonNegNum);
             Contract.EndContractBlock();
 
             // Just return length, SBCS stay the same length because they don't map to surrogate
@@ -921,12 +955,12 @@ namespace System.Text
                 charCount *= DecoderFallback.MaxCharCount;
 
             if (charCount > 0x7fffffff)
-                throw new ArgumentOutOfRangeException("byteCount", SR.ArgumentOutOfRange_GetCharCountOverflow);
+                throw new ArgumentOutOfRangeException(nameof(byteCount), SR.ArgumentOutOfRange_GetCharCountOverflow);
 
             return (int)charCount;
         }
 
-        // True if and only if the encoding only uses single byte code points.  (Ie, ASCII, 1252, etc)
+        // True if and only if the encoding only uses single byte code points.  (i.e. ASCII, 1252, etc)
         public override bool IsSingleByte
         {
             get

@@ -1,11 +1,12 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
-// This file is auto-generated, do not make permanent modifications.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using Xunit;
+using System;
 using System.Globalization;
-using System.Reflection;
 using System.Linq;
+using System.Reflection;
+using Xunit;
 
 namespace System.Numerics.Tests
 {
@@ -46,6 +47,8 @@ namespace System.Numerics.Tests
 
         private void TestConstructor<T>() where T : struct
         {
+            Assert.Throws<NullReferenceException>(() => new Vector<T>((T[])null));
+
             T[] values = GenerateRandomValuesForVector<T>();
             var vector = new Vector<T>(values);
             ValidateVector(
@@ -78,6 +81,8 @@ namespace System.Numerics.Tests
         public void ConstructorWithOffsetDouble() { TestConstructorWithOffset<Double>(); }
         private void TestConstructorWithOffset<T>() where T : struct
         {
+            Assert.Throws<NullReferenceException>(() => new Vector<T>((T[])null, 0));
+
             int offsetAmount = Util.GenerateSingleValue<int>(2, 250);
             T[] values = new T[offsetAmount].Concat(GenerateRandomValuesForVector<T>()).ToArray();
             var vector = new Vector<T>(values, offsetAmount);
@@ -301,6 +306,12 @@ namespace System.Numerics.Tests
             var initialValues = GenerateRandomValuesForVector<T>();
             var vector = new Vector<T>(initialValues);
             T[] array = new T[Vector<T>.Count];
+
+            Assert.Throws<NullReferenceException>(() => vector.CopyTo(null, 0));
+            Assert.Throws<ArgumentOutOfRangeException>(() => vector.CopyTo(array, -1));
+            Assert.Throws<ArgumentOutOfRangeException>(() => vector.CopyTo(array, array.Length));
+            Assert.Throws<ArgumentException>(() => vector.CopyTo(array, array.Length - 1));
+
             vector.CopyTo(array);
             for (int g = 0; g < array.Length; g++)
             {
@@ -370,11 +381,12 @@ namespace System.Numerics.Tests
             T[] values = GenerateRandomValuesForVector<T>();
             Vector<T> vector1 = new Vector<T>(values);
 
-            string stringObject = "This is not a Vector<T> object.";
+            const string stringObject = "This is not a Vector<T> object.";
             DateTime dateTimeObject = DateTime.UtcNow;
 
             Assert.False(vector1.Equals(stringObject));
             Assert.False(vector1.Equals(dateTimeObject));
+            Assert.True(vector1.Equals((object)vector1));
 
             if (typeof(T) != typeof(Int32))
             {
@@ -460,7 +472,11 @@ namespace System.Numerics.Tests
             int expected = 0;
             for (int g = 0; g < Vector<T>.Count; g++)
             {
-                expected = (((expected << 5) + expected) ^ v1[g].GetHashCode());
+                unchecked
+                {
+                    uint shift5 = ((uint)expected << 5) | ((uint)expected >> 27);
+                    expected = ((int)shift5 + expected) ^ v1[g].GetHashCode();
+                }
             }
 
             Assert.Equal(expected, hash);
@@ -791,17 +807,17 @@ namespace System.Numerics.Tests
                 });
         }
 
-        [Fact]
+        [ConditionalFact(nameof(PlatformDetection) + "." + nameof(PlatformDetection.IsNotWindowsSubsystemForLinux))] // https://github.com/Microsoft/BashOnWindows/issues/513
         public void DivisionByZeroExceptionByte() { TestDivisionByZeroException<Byte>(); }
-        [Fact]
+        [ConditionalFact(nameof(PlatformDetection) + "." + nameof(PlatformDetection.IsNotWindowsSubsystemForLinux))] // https://github.com/Microsoft/BashOnWindows/issues/513
         public void DivisionByZeroExceptionSByte() { TestDivisionByZeroException<SByte>(); }
-        [Fact]
+        [ConditionalFact(nameof(PlatformDetection) + "." + nameof(PlatformDetection.IsNotWindowsSubsystemForLinux))] // https://github.com/Microsoft/BashOnWindows/issues/513
         public void DivisionByZeroExceptionUInt16() { TestDivisionByZeroException<UInt16>(); }
-        [Fact]
+        [ConditionalFact(nameof(PlatformDetection) + "." + nameof(PlatformDetection.IsNotWindowsSubsystemForLinux))] // https://github.com/Microsoft/BashOnWindows/issues/513
         public void DivisionByZeroExceptionInt16() { TestDivisionByZeroException<Int16>(); }
-        [Fact]
+        [ConditionalFact(nameof(PlatformDetection) + "." + nameof(PlatformDetection.IsNotWindowsSubsystemForLinux))] // https://github.com/Microsoft/BashOnWindows/issues/513
         public void DivisionByZeroExceptionInt32() { TestDivisionByZeroException<Int32>(); }
-        [Fact]
+        [ConditionalFact(nameof(PlatformDetection) + "." + nameof(PlatformDetection.IsNotWindowsSubsystemForLinux))] // https://github.com/Microsoft/BashOnWindows/issues/513
         public void DivisionByZeroExceptionInt64() { TestDivisionByZeroException<Int64>(); }
         private void TestDivisionByZeroException<T>() where T : struct
         {
@@ -1119,7 +1135,7 @@ namespace System.Numerics.Tests
             T[] values2 = new T[Vector<T>.Count];
             for (int g = 0; g < Vector<T>.Count; g++)
             {
-                values2[g] = (T)(dynamic)(g * 5 + 9);
+                values2[g] = unchecked((T)(dynamic)(g * 5 + 9));
             }
             Vector<T> vec2 = new Vector<T>(values2);
 
@@ -1169,7 +1185,7 @@ namespace System.Numerics.Tests
             T[] values2 = new T[Vector<T>.Count];
             for (int g = 0; g < Vector<T>.Count; g++)
             {
-                values2[g] = (T)(dynamic)(g * 5 + 9);
+                values2[g] = unchecked((T)(dynamic)(g * 5 + 9));
             }
             Vector<T> vec2 = new Vector<T>(values2);
 
@@ -1208,24 +1224,28 @@ namespace System.Numerics.Tests
         public void GreaterThanOrEqualAnyDouble() { TestVectorGreaterThanOrEqualAny<Double>(); }
         private void TestVectorGreaterThanOrEqualAny<T>() where T : struct
         {
+            int maxT = GetMaxValue<T>();
+            double maxStep = (double)maxT / (double)Vector<T>.Count;
+            double halfStep = maxStep / 2;
+
             T[] values1 = new T[Vector<T>.Count];
             for (int g = 0; g < Vector<T>.Count; g++)
             {
-                values1[g] = (T)(dynamic)(g);
+                values1[g] = (T)(dynamic)(g * halfStep);
             }
             Vector<T> vec1 = new Vector<T>(values1);
 
             T[] values2 = new T[Vector<T>.Count];
             for (int g = 0; g < Vector<T>.Count; g++)
             {
-                values2[g] = (T)(dynamic)(g * 5);
+                values2[g] = (T)(dynamic)(g * maxStep);
             }
             Vector<T> vec2 = new Vector<T>(values2);
 
             T[] values3 = new T[Vector<T>.Count];
             for (int g = 0; g < Vector<T>.Count; g++)
             {
-                values3[g] = (T)(dynamic)(g * 5 + 3);
+                values3[g] = (T)(dynamic)((g + 1) * maxStep);
             }
             Vector<T> vec3 = new Vector<T>(values3);
 
@@ -1263,24 +1283,28 @@ namespace System.Numerics.Tests
         public void GreaterThanOrEqualAllDouble() { TestVectorGreaterThanOrEqualAll<Double>(); }
         private void TestVectorGreaterThanOrEqualAll<T>() where T : struct
         {
+            int maxT = GetMaxValue<T>();
+            double maxStep = (double)maxT / (double)Vector<T>.Count;
+            double halfStep = maxStep / 2;
+
             T[] values1 = new T[Vector<T>.Count];
             for (int g = 0; g < Vector<T>.Count; g++)
             {
-                values1[g] = (T)(dynamic)(g);
+                values1[g] = (T)(dynamic)(g * halfStep);
             }
             Vector<T> vec1 = new Vector<T>(values1);
 
             T[] values2 = new T[Vector<T>.Count];
             for (int g = 0; g < Vector<T>.Count; g++)
             {
-                values2[g] = (T)(dynamic)(g * 5);
+                values2[g] = (T)(dynamic)(g * maxStep);
             }
             Vector<T> vec2 = new Vector<T>(values2);
 
             T[] values3 = new T[Vector<T>.Count];
             for (int g = 0; g < Vector<T>.Count; g++)
             {
-                values3[g] = (T)(dynamic)(g * 5 + 3);
+                values3[g] = (T)(dynamic)((g + 1) * maxStep);
             }
             Vector<T> vec3 = new Vector<T>(values3);
 
@@ -2185,6 +2209,34 @@ namespace System.Numerics.Tests
                 Assert.Equal(values[g], array[g + offset]);
                 Assert.Equal(vector[g], array[g + offset]);
             }
+        }
+
+        [Fact]
+        public void CountViaReflectionConsistencyByte() { TestCountViaReflectionConsistency<Byte>(); }
+        [Fact]
+        public void CountViaReflectionConsistencySByte() { TestCountViaReflectionConsistency<SByte>(); }
+        [Fact]
+        public void CountViaReflectionConsistencyUInt16() { TestCountViaReflectionConsistency<UInt16>(); }
+        [Fact]
+        public void CountViaReflectionConsistencyInt16() { TestCountViaReflectionConsistency<Int16>(); }
+        [Fact]
+        public void CountViaReflectionConsistencyUInt32() { TestCountViaReflectionConsistency<UInt32>(); }
+        [Fact]
+        public void CountViaReflectionConsistencyInt32() { TestCountViaReflectionConsistency<Int32>(); }
+        [Fact]
+        public void CountViaReflectionConsistencyUInt64() { TestCountViaReflectionConsistency<UInt64>(); }
+        [Fact]
+        public void CountViaReflectionConsistencyInt64() { TestCountViaReflectionConsistency<Int64>(); }
+        [Fact]
+        public void CountViaReflectionConsistencySingle() { TestCountViaReflectionConsistency<Single>(); }
+        [Fact]
+        public void CountViaReflectionConsistencyDouble() { TestCountViaReflectionConsistency<Double>(); }
+        private void TestCountViaReflectionConsistency<T>() where T : struct
+        {
+            MethodInfo countMethod = typeof(Vector<T>).GetTypeInfo().GetDeclaredProperty("Count").GetMethod;
+            int valueFromReflection = (int)countMethod.Invoke(null, null);
+            int valueFromNormalCall = Vector<T>.Count;
+            Assert.Equal(valueFromNormalCall, valueFromReflection);
         }
         #endregion Reflection Tests
 

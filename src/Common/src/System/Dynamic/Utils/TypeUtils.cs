@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Reflection;
 
@@ -9,12 +10,7 @@ namespace System.Dynamic.Utils
     {
         public static bool AreEquivalent(Type t1, Type t2)
         {
-            return t1.IsEquivalentTo(t2);
-        }
-
-        public static bool IsEquivalentTo(this Type t1, Type t2)
-        {
-            return t1 == t2;
+            return t1 != null && t1.IsEquivalentTo(t2);
         }
 
         public static bool AreReferenceAssignable(Type dest, Type src)
@@ -24,7 +20,7 @@ namespace System.Dynamic.Utils
             {
                 return true;
             }
-            if (!dest.GetTypeInfo().IsValueType && !src.GetTypeInfo().IsValueType && dest.GetTypeInfo().IsAssignableFrom(src.GetTypeInfo()))
+            if (!dest.IsValueType && !src.IsValueType && dest.IsAssignableFrom(src))
             {
                 return true;
             }
@@ -33,21 +29,22 @@ namespace System.Dynamic.Utils
 
         public static bool IsSameOrSubclass(Type type, Type subType)
         {
-            return AreEquivalent(type, subType) || subType.GetTypeInfo().IsSubclassOf(type);
+            return AreEquivalent(type, subType) || subType.IsSubclassOf(type);
         }
 
-        public static void ValidateType(Type type)
+        public static void ValidateType(Type type, string paramName)
+        {
+            ValidateType(type, paramName, -1);
+        }
+
+        public static void ValidateType(Type type, string paramName, int index)
         {
             if (type != typeof(void))
-            { 
+            {
                 // A check to avoid a bunch of reflection (currently not supported) during cctor
-                if (type.GetTypeInfo().IsGenericTypeDefinition)
+                if (type.ContainsGenericParameters)
                 {
-                    throw Error.TypeIsGeneric(type);
-                }
-                if (type.GetTypeInfo().ContainsGenericParameters)
-                {
-                    throw Error.TypeContainsGenericParameters(type);
+                    throw type.IsGenericTypeDefinition ? Error.TypeIsGeneric(type, paramName, index) : Error.TypeContainsGenericParameters(type, paramName, index);
                 }
             }
         }
@@ -60,7 +57,7 @@ namespace System.Dynamic.Utils
             {
                 if (s_mscorlib == null)
                 {
-                    s_mscorlib = typeof(object).GetTypeInfo().Assembly;
+                    s_mscorlib = typeof(object).Assembly;
                 }
 
                 return s_mscorlib;
@@ -69,7 +66,7 @@ namespace System.Dynamic.Utils
 
         /// <summary>
         /// We can cache references to types, as long as they aren't in
-        /// collectable assemblies. Unfortunately, we can't really distinguish
+        /// collectible assemblies. Unfortunately, we can't really distinguish
         /// between different flavors of assemblies. But, we can at least
         /// create a cache for types in mscorlib (so we get the primitives, etc).
         /// </summary>
@@ -82,18 +79,18 @@ namespace System.Dynamic.Utils
             // that allows mscorlib types to be specialized by types in other
             // assemblies.
 
-            var asm = t.GetTypeInfo().Assembly;
+            Assembly asm = t.Assembly;
             if (asm != _mscorlib)
             {
                 // Not in mscorlib or our assembly
                 return false;
             }
 
-            if (t.GetTypeInfo().IsGenericType)
+            if (t.IsGenericType)
             {
                 foreach (Type g in t.GetGenericArguments())
                 {
-                    if (!CanCache(g))
+                    if (!g.CanCache())
                     {
                         return false;
                     }

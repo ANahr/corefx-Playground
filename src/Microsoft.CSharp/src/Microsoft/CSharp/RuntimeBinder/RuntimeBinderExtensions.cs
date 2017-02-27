@@ -1,5 +1,6 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Diagnostics;
@@ -19,46 +20,6 @@ namespace Microsoft.CSharp.RuntimeBinder
         public static bool IsNullableType(this Type type)
         {
             return type.IsConstructedGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>);
-        }
-
-        public static TypeCode GetTypeCode(this Type type)
-        {
-            if (type == null)
-                return TypeCode.Empty;
-            else if (type == typeof(bool))
-                return TypeCode.Boolean;
-            else if (type == typeof(char))
-                return TypeCode.Char;
-            else if (type == typeof(sbyte))
-                return TypeCode.SByte;
-            else if (type == typeof(byte))
-                return TypeCode.Byte;
-            else if (type == typeof(short))
-                return TypeCode.Int16;
-            else if (type == typeof(ushort))
-                return TypeCode.UInt16;
-            else if (type == typeof(int))
-                return TypeCode.Int32;
-            else if (type == typeof(uint))
-                return TypeCode.UInt32;
-            else if (type == typeof(long))
-                return TypeCode.Int64;
-            else if (type == typeof(ulong))
-                return TypeCode.UInt64;
-            else if (type == typeof(float))
-                return TypeCode.Single;
-            else if (type == typeof(double))
-                return TypeCode.Double;
-            else if (type == typeof(decimal))
-                return TypeCode.Decimal;
-            else if (type == typeof(System.DateTime))
-                return TypeCode.DateTime;
-            else if (type == typeof(string))
-                return TypeCode.String;
-            else if (type.GetTypeInfo().IsEnum)
-                return GetTypeCode(Enum.GetUnderlyingType(type));
-            else
-                return TypeCode.Object;
         }
 
         // This method is intended as a means to detect when MemberInfos are the same,
@@ -199,14 +160,14 @@ namespace Microsoft.CSharp.RuntimeBinder
                 if (t2.IsGenericParameter)
                 {
                     // If member's declaring type is not type parameter's declaring type, we assume that it is used as a type argument
-                    if (t1.GetTypeInfo().DeclaringMethod == null && member1.DeclaringType.Equals(t1.GetTypeInfo().DeclaringType))
+                    if (t1.DeclaringMethod == null && member1.DeclaringType.Equals(t1.DeclaringType))
                     {
-                        if (!(t2.GetTypeInfo().DeclaringMethod == null && member2.DeclaringType.Equals(t2.GetTypeInfo().DeclaringType)))
+                        if (!(t2.DeclaringMethod == null && member2.DeclaringType.Equals(t2.DeclaringType)))
                         {
                             return t1.IsTypeParameterEquivalentToTypeInst(t2, member2);
                         }
                     }
-                    else if (t2.GetTypeInfo().DeclaringMethod == null && member2.DeclaringType.Equals(t2.GetTypeInfo().DeclaringType))
+                    else if (t2.DeclaringMethod == null && member2.DeclaringType.Equals(t2.DeclaringType))
                     {
                         return t2.IsTypeParameterEquivalentToTypeInst(t1, member1);
                     }
@@ -224,7 +185,7 @@ namespace Microsoft.CSharp.RuntimeBinder
             }
 
             // Recurse in for generic types arrays, byref and pointer types.
-            if (t1.GetTypeInfo().IsGenericType && t2.GetTypeInfo().IsGenericType)
+            if (t1.IsGenericType && t2.IsGenericType)
             {
                 var args1 = t1.GetGenericArguments();
                 var args2 = t2.GetGenericArguments();
@@ -255,7 +216,7 @@ namespace Microsoft.CSharp.RuntimeBinder
         {
             Debug.Assert(typeParam.IsGenericParameter);
 
-            if (typeParam.GetTypeInfo().DeclaringMethod != null)
+            if (typeParam.DeclaringMethod != null)
             {
                 // The type param is from a generic method. Since only methods can be generic, anything else
                 // here means they are not equivalent.
@@ -265,7 +226,7 @@ namespace Microsoft.CSharp.RuntimeBinder
                 }
 
                 MethodBase method = (MethodBase)member;
-                int position = typeParam.GetTypeInfo().GenericParameterPosition;
+                int position = typeParam.GenericParameterPosition;
                 Type[] args = method.IsGenericMethod ? method.GetGenericArguments() : null;
 
                 return args != null &&
@@ -274,47 +235,58 @@ namespace Microsoft.CSharp.RuntimeBinder
             }
             else
             {
-                return member.DeclaringType.GetGenericArguments()[typeParam.GetTypeInfo().GenericParameterPosition].Equals(typeInst);
+                return member.DeclaringType.GetGenericArguments()[typeParam.GenericParameterPosition].Equals(typeInst);
             }
         }
 
+        // s_MemberEquivalence will replace itself with one version or another
+        // depending on what works at run time
+        private static Func<MemberInfo, MemberInfo, bool> s_MemberEquivalence = (m1, m2) =>
+            {
+                try
+                {
+                    // See if MetadataToken property is available.
+                    Type memberInfo = typeof(MemberInfo);
+                    PropertyInfo property = memberInfo.GetProperty("MetadataToken", typeof(int), Array.Empty<Type>());
 
-        private static readonly Func<MemberInfo, int> s_GetMetadataTokenSentinel = mi => { throw new InvalidOperationException(); };
-        private static Func<MemberInfo, int> s_GetMetadataToken = s_GetMetadataTokenSentinel;
+                    if ((object)property != null && property.CanRead)
+                    {
+                        // (parameter1, parameter2) => parameter1.MetadataToken == parameter2.MetadataToken
+                        var parameter1 = Expression.Parameter(memberInfo);
+                        var parameter2 = Expression.Parameter(memberInfo);
+                        var memberEquivalence = Expression.Lambda<Func<MemberInfo, MemberInfo, bool>>(
+                            Expression.Equal(
+                                Expression.Property(parameter1, property),
+                                Expression.Property(parameter2, property)),
+                                parameter1, parameter2).Compile();
+
+                        var result = memberEquivalence(m1, m2);
+                        // it worked, so publish it
+                        s_MemberEquivalence = memberEquivalence;
+
+                        return result;
+                    }
+                }
+                catch
+                {
+                    // Platform might not allow access to the property
+                }
+
+                // MetadataToken is not available in some contexts. Looks like this is one of those cases.
+                // fallback to "IsEquivalentTo"
+                Func<MemberInfo, MemberInfo, bool> fallbackMemberEquivalence = (m1param, m2param) => m1param.IsEquivalentTo(m2param);
+
+                // fallback must work 
+                s_MemberEquivalence = fallbackMemberEquivalence;
+                return fallbackMemberEquivalence(m1, m2);
+            };
 
         public static bool HasSameMetadataDefinitionAs(this MemberInfo mi1, MemberInfo mi2)
         {
 #if UNSUPPORTEDAPI
             return (mi1.MetadataToken == mi2.MetadataToken) && (mi1.Module == mi2.Module));
 #else
-            if (mi1.Module != mi2.Module)
-            {
-                return false;
-            }
-
-            if ((object)s_GetMetadataToken == (object)s_GetMetadataTokenSentinel)
-            {
-                // See if MetadataToken property is available.
-                Type memberInfo = typeof(MemberInfo);
-                PropertyInfo property = memberInfo.GetProperty("MetadataToken", typeof(int), Array.Empty<Type>());
-
-                if ((object)property == null || !property.CanRead)
-                {
-                    s_GetMetadataToken = null;
-                }
-                else
-                {
-                    var parameter = Expression.Parameter(memberInfo);
-                    s_GetMetadataToken = Expression.Lambda<Func<MemberInfo, int>>(Expression.Property(parameter, property), new[] { parameter }).Compile();
-                }
-            }
-
-            if ((object)s_GetMetadataToken != null)
-            {
-                return s_GetMetadataToken(mi1) == s_GetMetadataToken(mi2);
-            }
-
-            return mi1.IsEquivalentTo(mi2);
+            return mi1.Module.Equals(mi2.Module) && s_MemberEquivalence(mi1, mi2);
 #endif
         }
     }

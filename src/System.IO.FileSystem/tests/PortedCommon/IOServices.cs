@@ -1,5 +1,6 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -93,31 +94,32 @@ internal class IOServices
         return null;
     }
 
-
-    public static PathInfo GetPath(int characterCount)
+    public static PathInfo GetPath(string rootPath, int characterCount, bool extended)
     {
-        return GetPath("C:", characterCount);
+        if (extended)
+            rootPath = IOInputs.ExtendedPrefix + rootPath;
+        return GetPath(rootPath, characterCount);
     }
 
     public static PathInfo GetPath(string rootPath, int characterCount, int maxComponent = IOInputs.MaxComponent)
     {
         List<string> paths = new List<string>();
-        rootPath = rootPath.TrimEnd('\\', '/');
+        rootPath = rootPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
 
         StringBuilder path = new StringBuilder(characterCount);
         path.Append(rootPath);
 
         while (path.Length < characterCount)
         {
-            path.Append('\\');
+            path.Append(Path.DirectorySeparatorChar);
             if (path.Length == characterCount)
                 break;
 
-            // Components need to be in 255 character increments
-            path.Append(new string('A', Math.Min(maxComponent, characterCount - path.Length)));
+            // Continue adding guids until the character count is hit
+            string guid = Guid.NewGuid().ToString();
+            path.Append(guid.Substring(0, Math.Min(characterCount - path.Length, guid.Length)));
             paths.Add(path.ToString());
         }
-
         Assert.Equal(path.Length, characterCount);
 
         return new PathInfo(paths.ToArray());

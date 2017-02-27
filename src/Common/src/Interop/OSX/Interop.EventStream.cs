@@ -1,8 +1,11 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Runtime.InteropServices;
+
+using Microsoft.Win32.SafeHandles;
 
 using CFStringRef = System.IntPtr;
 using CFArrayRef = System.IntPtr;
@@ -19,7 +22,7 @@ internal static partial class Interop
         /// <summary>
         /// This constant specifies that we don't want historical file system events, only new ones
         /// </summary>
-        internal const ulong kFSEventStreamEventIdSinceNow = ulong.MaxValue;
+        internal const ulong kFSEventStreamEventIdSinceNow = 0xFFFFFFFFFFFFFFFF;
 
         /// <summary>
         /// Flags that describe what happened in the event that was received. These come from the FSEvents.h header file in the CoreServices framework.
@@ -27,6 +30,7 @@ internal static partial class Interop
         [Flags]
         internal enum FSEventStreamEventFlags : uint
         {
+            /* flags when creating the stream. */
             kFSEventStreamEventFlagNone                 = 0x00000000,
             kFSEventStreamEventFlagMustScanSubDirs      = 0x00000001,
             kFSEventStreamEventFlagUserDropped          = 0x00000002,
@@ -35,8 +39,8 @@ internal static partial class Interop
             kFSEventStreamEventFlagHistoryDone          = 0x00000010,
             kFSEventStreamEventFlagRootChanged          = 0x00000020,
             kFSEventStreamEventFlagMount                = 0x00000040,
-            kFSEventStreamEventFlagUnmount              = 0x00000080, /* These flags are only set if you specified the FileEvents */
-            /* flags when creating the stream. */
+            kFSEventStreamEventFlagUnmount              = 0x00000080,
+            /* These flags are only set if you specified the FileEvents */
             kFSEventStreamEventFlagItemCreated          = 0x00000100,
             kFSEventStreamEventFlagItemRemoved          = 0x00000200,
             kFSEventStreamEventFlagItemInodeMetaMod     = 0x00000400,
@@ -47,7 +51,10 @@ internal static partial class Interop
             kFSEventStreamEventFlagItemXattrMod         = 0x00008000,
             kFSEventStreamEventFlagItemIsFile           = 0x00010000,
             kFSEventStreamEventFlagItemIsDir            = 0x00020000,
-            kFSEventStreamEventFlagItemIsSymlink        = 0x00040000
+            kFSEventStreamEventFlagItemIsSymlink        = 0x00040000,
+            kFSEventStreamEventFlagOwnEvent             = 0x00080000,
+            kFSEventStreamEventFlagItemIsHardlink       = 0x00100000,
+            kFSEventStreamEventFlagItemIsLastHardlink   = 0x00200000,
         }
 
         /// <summary>
@@ -103,11 +110,11 @@ internal static partial class Interop
         /// <returns>On success, returns a pointer to an FSEventStream object; otherwise, returns IntPtr.Zero</returns>
         /// <remarks>For *nix systems, the CLR maps ANSI to UTF-8, so be explicit about that</remarks>
         [DllImport(Interop.Libraries.CoreServicesLibrary, CharSet = CharSet.Ansi)]
-        private static extern FSEventStreamRef FSEventStreamCreate(
+        private static extern SafeEventStreamHandle FSEventStreamCreate(
             IntPtr                      allocator,
             FSEventStreamCallback       cb,
             IntPtr                      context,
-            CFArrayRef                  pathsToWatch,
+            SafeCreateHandle            pathsToWatch,
             FSEventStreamEventId        sinceWhen,
             CFTimeInterval              latency,
             FSEventStreamCreateFlags    flags);
@@ -124,10 +131,10 @@ internal static partial class Interop
         /// </param>
         /// <param name="latency">Coalescing period to wait before sending events.</param>
         /// <param name="flags">Flags to say what kind of events should be sent through this stream.</param>
-        /// <returns>On success, returns a pointer to an FSEventStream object; otherwise, returns IntPtr.Zero</returns>
-        public static FSEventStreamRef FSEventStreamCreate(
+        /// <returns>On success, returns a valid SafeCreateHandle to an FSEventStream object; otherwise, returns an invalid SafeCreateHandle</returns>
+        internal static SafeEventStreamHandle FSEventStreamCreate(
             FSEventStreamCallback       cb,
-            CFArrayRef                  pathsToWatch,
+            SafeCreateHandle            pathsToWatch,
             FSEventStreamEventId        sinceWhen,
             CFTimeInterval              latency,
             FSEventStreamCreateFlags    flags)
@@ -143,9 +150,9 @@ internal static partial class Interop
         /// <param name="runLoopMode">The mode of the RunLoop; this should usually be kCFRunLoopDefaultMode. See the documentation for RunLoops for more info.</param>
         [DllImport(Interop.Libraries.CoreServicesLibrary)]
         internal static extern void FSEventStreamScheduleWithRunLoop(
-            FSEventStreamRef    streamRef,
-            CFRunLoopRef        runLoop,
-            CFStringRef         runLoopMode);
+            SafeEventStreamHandle   streamRef,
+            CFRunLoopRef            runLoop,
+            SafeCreateHandle        runLoopMode);
 
         /// <summary>
         /// Starts receiving events on the specified stream.
@@ -153,14 +160,29 @@ internal static partial class Interop
         /// <param name="streamRef">The stream to receive events on.</param>
         /// <returns>Returns true if the stream was started; otherwise, returns false and no events will be received.</returns>
         [DllImport(Interop.Libraries.CoreServicesLibrary)]
-        internal static extern bool FSEventStreamStart(FSEventStreamRef streamRef);
+        internal static extern bool FSEventStreamStart(SafeEventStreamHandle streamRef);
 
         /// <summary>
         /// Stops receiving events on the specified stream. The stream can be restarted and not miss any events.
         /// </summary>
         /// <param name="streamRef">The stream to stop receiving events on.</param>
         [DllImport(Interop.Libraries.CoreServicesLibrary)]
-        internal static extern void FSEventStreamStop(FSEventStreamRef streamRef);
+        internal static extern void FSEventStreamStop(SafeEventStreamHandle streamRef);
+
+        /// <summary>
+        /// Stops receiving events on the specified stream. The stream can be restarted and not miss any events.
+        /// </summary>
+        /// <param name="streamRef">The stream to stop receiving events on.</param>
+        [DllImport(Interop.Libraries.CoreServicesLibrary)]
+        internal static extern void FSEventStreamStop(IntPtr streamRef);
+
+        /// <summary>
+        /// Invalidates an EventStream and removes it from any RunLoops.
+        /// </summary>
+        /// <param name="streamRef">The FSEventStream to invalidate</param>
+        /// <remarks>This can only be called after FSEventStreamScheduleWithRunLoop has be called</remarks>
+        [DllImport(Interop.Libraries.CoreServicesLibrary)]
+        internal static extern void FSEventStreamInvalidate(IntPtr streamRef);
 
         /// <summary>
         /// Removes the event stream from the RunLoop.
@@ -170,15 +192,15 @@ internal static partial class Interop
         /// <param name="runLoopMode">The mode of the RunLoop; this should usually be kCFRunLoopDefaultMode. See the documentation for RunLoops for more info.</param>
         [DllImport(Interop.Libraries.CoreServicesLibrary)]
         internal static extern void FSEventStreamUnscheduleFromRunLoop(
-            FSEventStreamRef    streamRef, 
-            CFRunLoopRef        runLoop, 
-            CFStringRef         runLoopMode);
+            SafeEventStreamHandle   streamRef,
+            CFRunLoopRef            runLoop,
+            SafeCreateHandle        runLoopMode);
 
         /// <summary>
         /// Releases a reference count on the specified EventStream and, if necessary, cleans the stream up.
         /// </summary>
         /// <param name="streamRef">The stream on which to decrement the reference count.</param>
         [DllImport(Interop.Libraries.CoreServicesLibrary)]
-        internal static extern void FSEventStreamRelease(FSEventStreamRef streamRef);
+        internal static extern void FSEventStreamRelease(IntPtr streamRef);
     }
 }

@@ -1,10 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
-//------------------------------------------------------------
-//------------------------------------------------------------
-// Parser
-// PERF: Optimize double, decimal?  They get converted to strings in lots of cases
-// PERF: Cleanup CharType.  Don't generate tables at runtime.  Use const tables.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.IO;
@@ -358,197 +354,197 @@ namespace System.Xml
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
                 /* 9F (.) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* A0 (�) */
+                /* A0 (.) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* A1 (�) */
+                /* A1 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* A2 (�) */
+                /* A2 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* A3 (�) */
+                /* A3 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* A4 () */
+                /* A4 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* A5 (�) */
+                /* A5 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* A6 (�) */
+                /* A6 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* A7 () */
+                /* A7 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* A8 (") */
+                /* A8 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* A9 (c) */
+                /* A9 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* AA (�) */
+                /* AA (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* AB (�) */
+                /* AB (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* AC (�) */
+                /* AC (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* AD (-) */
+                /* AD (.) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* AE (r) */
+                /* AE (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* AF (_) */
+                /* AF (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* B0 (�) */
+                /* B0 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* B1 (�) */
+                /* B1 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* B2 (�) */
+                /* B2 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* B3 (3) */
+                /* B3 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* B4 (') */
+                /* B4 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* B5 (�) */
+                /* B5 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* B6 () */
+                /* B6 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* B7 (�) */
+                /* B7 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* B8 (,) */
+                /* B8 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* B9 (1) */
+                /* B9 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* BA (�) */
+                /* BA (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* BB (�) */
+                /* BB (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* BC (�) */
+                /* BC (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* BD (�) */
+                /* BD (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* BE (_) */
+                /* BE (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* BF (�) */
+                /* BF (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* C0 (A) */
+                /* C0 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* C1 (A) */
+                /* C1 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* C2 (A) */
+                /* C2 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* C3 (A) */
+                /* C3 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* C4 (�) */
+                /* C4 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* C5 (�) */
+                /* C5 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* C6 (�) */
+                /* C6 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* C7 (�) */
+                /* C7 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* C8 (E) */
+                /* C8 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* C9 (�) */
+                /* C9 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* CA (E) */
+                /* CA (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* CB (E) */
+                /* CB (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* CC (I) */
+                /* CC (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* CD (I) */
+                /* CD (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* CE (I) */
+                /* CE (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* CF (I) */
+                /* CF (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* D0 (D) */
+                /* D0 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* D1 (�) */
+                /* D1 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* D2 (O) */
+                /* D2 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* D3 (O) */
+                /* D3 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* D4 (O) */
+                /* D4 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* D5 (O) */
+                /* D5 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* D6 (�) */
+                /* D6 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* D7 (x) */
+                /* D7 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* D8 (O) */
+                /* D8 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* D9 (U) */
+                /* D9 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* DA (U) */
+                /* DA (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* DB (U) */
+                /* DB (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* DC (�) */
+                /* DC (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* DD (Y) */
+                /* DD (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* DE (_) */
+                /* DE (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* DF (�) */
+                /* DF (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* E0 (�) */
+                /* E0 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* E1 (�) */
+                /* E1 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* E2 (�) */
+                /* E2 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* E3 (a) */
+                /* E3 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* E4 (�) */
+                /* E4 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* E5 (�) */
+                /* E5 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* E6 (�) */
+                /* E6 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* E7 (�) */
+                /* E7 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* E8 (�) */
+                /* E8 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* E9 (�) */
+                /* E9 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* EA (�) */
+                /* EA (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* EB (�) */
+                /* EB (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* EC (�) */
+                /* EC (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* ED (�) */
+                /* ED (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* EE (�) */
+                /* EE (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* EF (�) */
+                /* EF (?) */
                          CharType.None|CharType.FirstName|CharType.Name,
-                /* F0 (d) */
+                /* F0 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* F1 (�) */
+                /* F1 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* F2 (�) */
+                /* F2 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* F3 (�) */
+                /* F3 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* F4 (�) */
+                /* F4 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* F5 (o) */
+                /* F5 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* F6 (�) */
+                /* F6 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* F7 (�) */
+                /* F7 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* F8 (o) */
+                /* F8 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* F9 (�) */
+                /* F9 (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* FA (�) */
+                /* FA (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* FB (�) */
+                /* FB (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* FC (�) */
+                /* FC (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* FD (y) */
+                /* FD (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* FE (_) */
+                /* FE (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
-                /* FF (�) */
+                /* FF (?) */
                          CharType.None|CharType.Comment|CharType.FirstName|CharType.Name|CharType.Text|CharType.AttributeText,
             };
 
@@ -561,15 +557,15 @@ namespace System.Xml
         public void SetInput(byte[] buffer, int offset, int count, Encoding encoding, XmlDictionaryReaderQuotas quotas, OnXmlDictionaryReaderClose onClose)
         {
             if (buffer == null)
-                throw System.Runtime.Serialization.DiagnosticUtility.ExceptionUtility.ThrowHelperError(new ArgumentNullException("buffer"));
+                throw System.Runtime.Serialization.DiagnosticUtility.ExceptionUtility.ThrowHelperError(new ArgumentNullException(nameof(buffer)));
             if (offset < 0)
-                throw System.Runtime.Serialization.DiagnosticUtility.ExceptionUtility.ThrowHelperError(new ArgumentOutOfRangeException("offset", SR.Format(SR.ValueMustBeNonNegative)));
+                throw System.Runtime.Serialization.DiagnosticUtility.ExceptionUtility.ThrowHelperError(new ArgumentOutOfRangeException(nameof(offset), SR.Format(SR.ValueMustBeNonNegative)));
             if (offset > buffer.Length)
-                throw System.Runtime.Serialization.DiagnosticUtility.ExceptionUtility.ThrowHelperError(new ArgumentOutOfRangeException("offset", SR.Format(SR.OffsetExceedsBufferSize, buffer.Length)));
+                throw System.Runtime.Serialization.DiagnosticUtility.ExceptionUtility.ThrowHelperError(new ArgumentOutOfRangeException(nameof(offset), SR.Format(SR.OffsetExceedsBufferSize, buffer.Length)));
             if (count < 0)
-                throw System.Runtime.Serialization.DiagnosticUtility.ExceptionUtility.ThrowHelperError(new ArgumentOutOfRangeException("count", SR.Format(SR.ValueMustBeNonNegative)));
+                throw System.Runtime.Serialization.DiagnosticUtility.ExceptionUtility.ThrowHelperError(new ArgumentOutOfRangeException(nameof(count), SR.Format(SR.ValueMustBeNonNegative)));
             if (count > buffer.Length - offset)
-                throw System.Runtime.Serialization.DiagnosticUtility.ExceptionUtility.ThrowHelperError(new ArgumentOutOfRangeException("count", SR.Format(SR.SizeExceedsRemainingBufferSpace, buffer.Length - offset)));
+                throw System.Runtime.Serialization.DiagnosticUtility.ExceptionUtility.ThrowHelperError(new ArgumentOutOfRangeException(nameof(count), SR.Format(SR.SizeExceedsRemainingBufferSpace, buffer.Length - offset)));
             MoveToInitial(quotas, onClose);
             ArraySegment<byte> seg = EncodingStreamWrapper.ProcessBuffer(buffer, offset, count, encoding);
             BufferReader.SetBuffer(seg.Array, seg.Offset, seg.Count, null, null);
@@ -579,7 +575,7 @@ namespace System.Xml
         public void SetInput(Stream stream, Encoding encoding, XmlDictionaryReaderQuotas quotas, OnXmlDictionaryReaderClose onClose)
         {
             if (stream == null)
-                throw System.Runtime.Serialization.DiagnosticUtility.ExceptionUtility.ThrowHelperArgumentNull("stream");
+                throw System.Runtime.Serialization.DiagnosticUtility.ExceptionUtility.ThrowHelperArgumentNull(nameof(stream));
             MoveToInitial(quotas, onClose);
             stream = new EncodingStreamWrapper(stream, encoding);
             BufferReader.SetBuffer(stream, null, null);
@@ -892,6 +888,24 @@ namespace System.Xml
             ProcessAttributes();
         }
 
+        // NOTE: Call only if 0xEF has been seen in the stream AND there are three valid bytes to check (buffer[offset], buffer[offset + 1], buffer[offset + 2]). 
+        // 0xFFFE and 0xFFFF are not valid characters per Unicode specification. The first byte in the UTF8 representation is 0xEF. 
+        private bool IsNextCharacterNonFFFE(byte[] buffer, int offset)
+        {
+            Fx.Assert(buffer[offset] == 0xEF, "buffer[offset] MUST be 0xEF.");
+
+            if (buffer[offset + 1] == 0xBF && (buffer[offset + 2] == 0xBE || buffer[offset + 2] == 0xBF))
+            {
+                // 0xFFFE : 0xEF 0xBF 0xBE
+                // 0xFFFF : 0xEF 0xBF 0xBF
+                // we know that buffer[offset] is already 0xEF, don't bother checking it.
+                return false;
+            }
+
+            // no bad characters
+            return true;
+        }
+
         private void ReadNonFFFE()
         {
             int off;
@@ -1142,6 +1156,54 @@ namespace System.Xml
             return offset - textOffset;
         }
 
+        // Read Unicode codepoints 0xFvvv
+        private int ReadTextAndWatchForInvalidCharacters(byte[] buffer, int offset, int offsetMax)
+        {
+            byte[] charType = XmlUTF8TextReader.s_charType;
+            int textOffset = offset;
+
+            while (offset < offsetMax && ((charType[buffer[offset]] & CharType.Text) != 0 || buffer[offset] == 0xEF))
+            {
+                if (buffer[offset] != 0xEF)
+                {
+                    offset++;
+                }
+                else
+                {
+                    // Ensure that we have three bytes (buffer[offset], buffer[offset + 1], buffer[offset + 2])  
+                    // available for IsNextCharacterNonFFFE to check. 
+                    if (offset + 2 < offsetMax)
+                    {
+                        if (IsNextCharacterNonFFFE(buffer, offset))
+                        {
+                            // if first byte is 0xEF, UTF8 mandates a 3-byte character representation of this Unicode code point
+                            offset += 3;
+                        }
+                        else
+                        {
+                            XmlExceptionHelper.ThrowXmlException(this, new XmlException(SR.Format(SR.XmlInvalidFFFE)));
+                        }
+                    }
+                    else
+                    {
+                        if (BufferReader.Offset < offset)
+                        {
+                            // We have read some characters already
+                            // Let the outer ReadText advance the bufferReader and return text node to caller
+                            break;
+                        }
+                        else
+                        {
+                            // Get enough bytes for us to process next character, then go back to top of while loop
+                            int dummy;
+                            BufferReader.GetBuffer(3, out dummy);
+                        }
+                    }
+                }
+            }
+            return offset - textOffset;
+        }
+
         // bytes   bits    UTF-8 representation
         // -----   ----    -----------------------------------
         // 1        7      0vvvvvvv
@@ -1166,11 +1228,11 @@ namespace System.Xml
                 if (length == 0)
                     return originalLength; // Invalid utf8 sequence - can't break
                 // Count how many bytes follow the lead char
-                byte b = (byte)(buffer[offset + length] << 2);
+                byte b = unchecked((byte)(buffer[offset + length] << 2));
                 int byteCount = 2;
                 while ((b & 0x80) == 0x80)
                 {
-                    b = (byte)(b << 1);
+                    b = unchecked((byte)(b << 1));
                     byteCount++;
                     // There shouldn't be more than 3 bytes following the lead char
                     if (byteCount > 4)
@@ -1178,13 +1240,11 @@ namespace System.Xml
                 }
                 if (length + byteCount == originalLength)
                     return originalLength; // sequence fits exactly
-                if (length == 0)
-                    return originalLength; // Quota too small to read a char
             }
             return length;
         }
 
-        private void ReadText()
+        private void ReadText(bool hasLeadingByteOf0xEF)
         {
             byte[] buffer;
             int offset;
@@ -1194,12 +1254,26 @@ namespace System.Xml
             if (_buffered)
             {
                 buffer = BufferReader.GetBuffer(out offset, out offsetMax);
-                length = ReadText(buffer, offset, offsetMax);
+                if (hasLeadingByteOf0xEF)
+                {
+                    length = ReadTextAndWatchForInvalidCharacters(buffer, offset, offsetMax); 
+                }
+                else
+                {
+                    length = ReadText(buffer, offset, offsetMax); 
+                }
             }
             else
             {
                 buffer = BufferReader.GetBuffer(MaxTextChunk, out offset, out offsetMax);
-                length = ReadText(buffer, offset, offsetMax);
+                if (hasLeadingByteOf0xEF)
+                {
+                    length = ReadTextAndWatchForInvalidCharacters(buffer, offset, offsetMax); 
+                }
+                else
+                {
+                    length = ReadText(buffer, offset, offsetMax);
+                }
                 length = BreakText(buffer, offset, length);
             }
             BufferReader.Advance(length);
@@ -1285,7 +1359,7 @@ namespace System.Xml
             }
             else if ((s_charType[ch] & CharType.Text) != 0)
             {
-                ReadText();
+                ReadText(false);
             }
             else if (ch == '&')
             {
@@ -1316,9 +1390,7 @@ namespace System.Xml
             }
             else if (ch == 0xEF)  // Watch for invalid characters 0xfffe and 0xffff
             {
-                int offset = BufferReader.Offset;
-                ReadNonFFFE();
-                MoveToComplexText().Value.SetValue(ValueHandleType.UTF8, offset, 3);
+                ReadText(true);
             }
             else
             {

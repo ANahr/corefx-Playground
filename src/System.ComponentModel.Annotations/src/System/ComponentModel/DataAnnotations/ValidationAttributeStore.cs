@@ -1,7 +1,9 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
@@ -114,10 +116,7 @@ namespace System.ComponentModel.DataAnnotations
         /// <returns>The type store item.  It will not be null.</returns>
         private TypeStoreItem GetTypeStoreItem(Type type)
         {
-            if (type == null)
-            {
-                throw new ArgumentNullException("type");
-            }
+            Debug.Assert(type != null);
 
             lock (_typeStoreItems)
             {
@@ -125,7 +124,7 @@ namespace System.ComponentModel.DataAnnotations
                 if (!_typeStoreItems.TryGetValue(type, out item))
                 {
                     // use CustomAttributeExtensions.GetCustomAttributes() to get inherited attributes as well as direct ones
-                    var attributes = CustomAttributeExtensions.GetCustomAttributes(type.GetTypeInfo(), true);
+                    var attributes = CustomAttributeExtensions.GetCustomAttributes(type, true);
                     item = new TypeStoreItem(type, attributes);
                     _typeStoreItems[type] = item;
                 }
@@ -141,7 +140,7 @@ namespace System.ComponentModel.DataAnnotations
         {
             if (validationContext == null)
             {
-                throw new ArgumentNullException("validationContext");
+                throw new ArgumentNullException(nameof(validationContext));
             }
         }
 
@@ -199,7 +198,7 @@ namespace System.ComponentModel.DataAnnotations
                     throw new ArgumentException(
                         string.Format(CultureInfo.CurrentCulture,
                             SR.AttributeStore_Unknown_Property, _type.Name, propertyName),
-                        "propertyName");
+nameof(propertyName));
                 }
                 return item;
             }
@@ -208,7 +207,7 @@ namespace System.ComponentModel.DataAnnotations
             {
                 if (string.IsNullOrEmpty(propertyName))
                 {
-                    throw new ArgumentNullException("propertyName");
+                    throw new ArgumentNullException(nameof(propertyName));
                 }
 
                 if (_propertyStoreItems == null)

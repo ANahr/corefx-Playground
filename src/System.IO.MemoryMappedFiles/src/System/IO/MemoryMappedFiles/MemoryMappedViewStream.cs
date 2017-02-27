@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using Microsoft.Win32.SafeHandles;
 using System.Diagnostics;
@@ -23,7 +24,7 @@ namespace System.IO.MemoryMappedFiles
         public SafeMemoryMappedViewHandle SafeMemoryMappedViewHandle
         {
             [SecurityCritical]
-            get { return _view != null ? _view.ViewHandle : null; }
+            get { return _view.ViewHandle; }
         }
 
         public override void SetLength(long value)
@@ -33,15 +34,7 @@ namespace System.IO.MemoryMappedFiles
 
         public long PointerOffset
         {
-            get
-            {
-                if (_view == null)
-                {
-                    throw new InvalidOperationException(SR.InvalidOperation_ViewIsNull);
-                }
-
-                return _view.PointerOffset;
-            }
+            get { return _view.PointerOffset; }
         }
 
         [SecuritySafeCritical]
@@ -49,7 +42,7 @@ namespace System.IO.MemoryMappedFiles
         {
             try
             {
-                if (disposing && _view != null && !_view.IsClosed)
+                if (disposing && !_view.IsClosed)
                 {
                     Flush();
                 }
@@ -58,10 +51,7 @@ namespace System.IO.MemoryMappedFiles
             {
                 try
                 {
-                    if (_view != null)
-                    {
-                        _view.Dispose();
-                    }
+                    _view.Dispose();
                 }
                 finally
                 {
@@ -83,13 +73,7 @@ namespace System.IO.MemoryMappedFiles
                 throw __Error.GetStreamIsClosed();
             }
 
-            unsafe
-            {
-                if (_view != null)
-                {
-                    _view.Flush((UIntPtr)Capacity);
-                }
-            }
+            _view.Flush((UIntPtr)Capacity);
         }
     }
 }

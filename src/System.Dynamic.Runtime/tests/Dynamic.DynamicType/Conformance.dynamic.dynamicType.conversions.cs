@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using Xunit;
 
@@ -1441,7 +1442,7 @@ namespace ManagedTests.DynamicCSharp.Conformance.dynamic.dynamicType.conversions
 
     public class C
     {
-        [Fact(Skip = "870811")]
+        
         public static void DynamicCSharpRunTest()
         {
             Assert.Equal(0, MainMethod());
@@ -1568,7 +1569,7 @@ namespace ManagedTests.DynamicCSharp.Conformance.dynamic.dynamicType.conversions
 
     public class ConversionInRuntimeType
     {
-        private static bool NoPredefinedImplicitConversionButExistExplictConversion()
+        private static bool NoPredefinedImplicitConversionButExistExplicitConversion()
         {
             int failcount = 0;
             ulong origin = 100;
@@ -1591,7 +1592,7 @@ namespace ManagedTests.DynamicCSharp.Conformance.dynamic.dynamicType.conversions
             return failcount == 0;
         }
 
-        private static bool NoUserdefinedImplicitConversionButExistExplictConversion()
+        private static bool NoUserdefinedImplicitConversionButExistExplicitConversion()
         {
             int failcount = 0;
             C origin = new C(22);
@@ -1623,8 +1624,8 @@ namespace ManagedTests.DynamicCSharp.Conformance.dynamic.dynamicType.conversions
         public static int MainMethod()
         {
             int result = 0;
-            result += Verify.Eval(NoPredefinedImplicitConversionButExistExplictConversion);
-            result += Verify.Eval(NoUserdefinedImplicitConversionButExistExplictConversion);
+            result += Verify.Eval(NoPredefinedImplicitConversionButExistExplicitConversion);
+            result += Verify.Eval(NoUserdefinedImplicitConversionButExistExplicitConversion);
             return result;
         }
     }
@@ -3264,8 +3265,8 @@ namespace ManagedTests.DynamicCSharp.Conformance.dynamic.dynamicType.conversions
     // <Area> Dynamic -- implicit conversion</Area>
     // <Title> The conversion occurs in evaluating the type of null coalescing operator </Title>
     // <Description>
-    // Any type is implicitly convertable to dynamic
-    // and dynamic is implicitly convertable to any type.
+    // Any type is implicitly convertible to dynamic
+    // and dynamic is implicitly convertible to any type.
     // but previous should be high priority.
     // </Description>
     // <RelatedBugs></RelatedBugs>
@@ -3362,8 +3363,8 @@ namespace ManagedTests.DynamicCSharp.Conformance.dynamic.dynamicType.conversions
     // <Area> Dynamic -- implicit conversion</Area>
     // <Title> The conversion occurs in evaluating the type of conditional operator </Title>
     // <Description>
-    // Any type is implicitly convertable to dynamic
-    // and dynamic is implicitly convertable to any type.
+    // Any type is implicitly convertible to dynamic
+    // and dynamic is implicitly convertible to any type.
     // but previous should be high priority.
     // </Description>
     // <RelatedBugs></RelatedBugs>
@@ -4205,7 +4206,7 @@ namespace ManagedTests.DynamicCSharp.Conformance.dynamic.dynamicType.conversions
             return 0;
         }
 
-        static public MyStack<object> SPropObj
+        public static MyStack<object> SPropObj
         {
             get
             {
@@ -4241,7 +4242,7 @@ namespace ManagedTests.DynamicCSharp.Conformance.dynamic.dynamicType.conversions
             return new MyStack<object>();
         }
 
-        static public MyStack<dynamic> M4DelDyn(int x = 1, int y = 1)
+        public static MyStack<dynamic> M4DelDyn(int x = 1, int y = 1)
         {
             return new MyStack<dynamic>();
         }
@@ -4708,7 +4709,7 @@ namespace ManagedTests.DynamicCSharp.Conformance.dynamic.dynamicType.conversions
 {
     using ManagedTests.DynamicCSharp.Conformance.dynamic.dynamicType.conversions.using001.using001;
     // <Title> Conversion </Title>
-    // <Description> These sceanrios are still using normal conversion
+    // <Description> These scenarios are still using normal conversion
     //    Let dynamic object to do the conversion to IDisposable is covered in IDO test cases
     // </Description>
     // <RelatedBugs></RelatedBugs>
@@ -5272,13 +5273,20 @@ namespace ManagedTests.DynamicCSharp.Conformance.dynamic.dynamicType.conversions
 
         public static int MainMethod(string[] args)
         {
+            ulong i, j;
             double x = ulong.MaxValue;
-            dynamic d = x;
-            ulong i = (ulong)x;
-            ulong j = (ulong)d;
-            Expression<Func<object, ulong>> lambda = foo => (ulong)(double)foo;
+            dynamic d;
+
+            unchecked
+            {
+                d = x;
+                i = (ulong)x;
+                j = (ulong)d;
+            }
+
+            Expression<Func<object, ulong>> lambda = foo => unchecked((ulong)(double)foo);
             ulong res = lambda.Compile()(x);
-            Func<object, ulong> lambda2 = foo => (ulong)(double)foo;
+            Func<object, ulong> lambda2 = foo => unchecked((ulong)(double)foo);
             ulong res2 = lambda2(x);
             if (i != j)
                 return 1;

@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 // =+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
 //
@@ -7,10 +8,10 @@
 //
 //
 // Contains tests for testing the Partitioner1Chunk new Dev11 feature.
-// In this partioner the chunk size is always 1
+// In this partitioner the chunk size is always 1
 //
 // The included scenarios are:
-//  1. Partitioner Corectness:
+//  1. Partitioner Correctness:
 //          - Chunk is one
 //          - ParallelForEach support iteration dependencies 
 //  2. Enumerators are disposed in ParallelForEach usage
@@ -18,20 +19,14 @@
 //
 // =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-using Xunit;
-using CoreFXTestLibrary;
-
-using System;
-using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
+using System.Diagnostics;
+using Xunit;
 
-namespace System.Threading.Tasks.Test
+namespace System.Threading.Tasks.Tests
 {
-
-    public class Partitioner1Chunk
+    public static class Partitioner1Chunk
     {
         /// <summary>
         /// Test the fact that every call of the get*DynamicPartitions.GetEnumerator().MoveNext 
@@ -55,7 +50,7 @@ namespace System.Threading.Tasks.Test
         }
         private static void OneMoveNext(int length, bool isOrderable)
         {
-            Logger.LogInformation("Length: {0} IsOrderable: {1}", length, isOrderable);
+            Debug.WriteLine("Length: {0} IsOrderable: {1}", length, isOrderable);
             List<int> ds = new List<int>();
             for (int i = 0; i < length; i++)
                 ds.Add(i);
@@ -68,7 +63,7 @@ namespace System.Threading.Tasks.Test
             {
                 //keep track how many times the move next of the data source was called
                 //it is expected as 
-                //every call of MoveNext on partioner>GetDynamicPartions.GetEnumerator 
+                //every call of MoveNext on partitioner>GetDynamicPartions.GetEnumerator 
                 //to result in only one call of datasource Move Next
                 //there is not need to guard for concurrency issues because this scenario is single threaded
                 dataSourceMoveNextCalls++;
@@ -187,7 +182,7 @@ namespace System.Threading.Tasks.Test
 
             Exception userEx = new InvalidOperationException("UserException");
             //this is an enumerable that will execute user actions on move next, current and dispose
-            //in this case we will set it to thorw on MoveNext for specified index
+            //in this case we will set it to throw on MoveNext for specified index
             UserActionEnumerable<int> customEnumerable = new UserActionEnumerable<int>(ds);
             Action<int> moveNextUserAction = (currentElement) =>
                                                             {
@@ -298,7 +293,7 @@ namespace System.Threading.Tasks.Test
         //the enumerators should be disposed
         private ConcurrentBag<UserActionEnumerator<T>> _allEnumerators = new ConcurrentBag<UserActionEnumerator<T>>();
 
-        //called in the begining of enumerator Move Next 
+        //called in the beginning of enumerator Move Next 
         private Action<int> _moveNextAction = null;
 
         public UserActionEnumerable(List<T> enumerable, Action<int> moveNextAction)
@@ -420,7 +415,7 @@ namespace System.Threading.Tasks.Test
         }
 
         /// <summary>
-        /// Dispose the underlying Enumerator, and supresses finalization
+        /// Dispose the underlying Enumerator, and suppresses finalization
         /// so that we will not throw.
         /// </summary>
         public void Dispose()

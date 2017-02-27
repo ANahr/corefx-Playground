@@ -1,7 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
-//-----------------------------------------------------------------------------
-//-----------------------------------------------------------------------------
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections;
@@ -17,100 +16,65 @@ using System.Linq;
 
 namespace System.Runtime.Serialization
 {
+#if NET_NATIVE
+    public sealed class EnumDataContract : DataContract
+#else
     internal sealed class EnumDataContract : DataContract
+#endif
     {
-        [SecurityCritical]
-        /// <SecurityNote>
-        /// Critical - holds instance of CriticalHelper which keeps state that is cached statically for serialization. 
-        ///            Static fields are marked SecurityCritical or readonly to prevent
-        ///            data from being modified or leaked to other components in appdomain.
-        /// </SecurityNote>
         private EnumDataContractCriticalHelper _helper;
 
-        /// <SecurityNote>
-        /// Critical - initializes SecurityCritical field 'helper'
-        /// Safe - doesn't leak anything
-        /// </SecurityNote>
-        [SecuritySafeCritical]
-        internal EnumDataContract() : base(new EnumDataContractCriticalHelper())
+        public EnumDataContract() : base(new EnumDataContractCriticalHelper())
         {
             _helper = base.Helper as EnumDataContractCriticalHelper;
         }
 
-        /// <SecurityNote>
-        /// Critical - initializes SecurityCritical field 'helper'
-        /// Safe - doesn't leak anything
-        /// </SecurityNote>
-        [SecuritySafeCritical]
+        public XmlQualifiedName BaseContractName { get; set; }
+
         internal EnumDataContract(Type type) : base(new EnumDataContractCriticalHelper(type))
         {
             _helper = base.Helper as EnumDataContractCriticalHelper;
         }
-        internal List<DataMember> Members
+        public List<DataMember> Members
         {
-            /// <SecurityNote>
-            /// Critical - fetches the critical Members property
-            /// Safe - Members only needs to be protected for write
-            /// </SecurityNote>
-            [SecuritySafeCritical]
             get
             { return _helper.Members; }
+            set { _helper.Members = value; }
         }
 
-        internal List<long> Values
+        public List<long> Values
         {
-            /// <SecurityNote>
-            /// Critical - fetches the critical Values property
-            /// Safe - Values only needs to be protected for write
-            /// </SecurityNote>
-            [SecuritySafeCritical]
             get
             { return _helper.Values; }
+            set { _helper.Values = value; }
         }
 
-        internal bool IsFlags
+        public bool IsFlags
         {
-            /// <SecurityNote>
-            /// Critical - fetches the critical IsFlags property
-            /// Safe - IsFlags only needs to be protected for write
-            /// </SecurityNote>
-            [SecuritySafeCritical]
             get
             { return _helper.IsFlags; }
+            set { _helper.IsFlags = value; }
         }
 
-        internal bool IsULong
+        public bool IsULong
         {
-            /// <SecurityNote>
-            /// Critical - fetches the critical IsULong property
-            /// Safe - IsULong only needs to be protected for write
-            /// </SecurityNote>
-            [SecuritySafeCritical]
             get
             { return _helper.IsULong; }
+            set { _helper.IsULong = value; }
         }
 
-        private XmlDictionaryString[] ChildElementNames
+        public XmlDictionaryString[] ChildElementNames
         {
-            /// <SecurityNote>
-            /// Critical - fetches the critical ChildElementNames property
-            /// Safe - ChildElementNames only needs to be protected for write
-            /// </SecurityNote>
-            [SecuritySafeCritical]
             get
             { return _helper.ChildElementNames; }
+            set { _helper.ChildElementNames = value; }
         }
 
         internal override bool CanContainReferences
         {
             get { return false; }
         }
-        [SecurityCritical]
 
-        /// <SecurityNote>
-        /// Critical - holds all state used for (de)serializing enums.
-        ///            since the data is cached statically, we lock down access to it.
-        /// </SecurityNote>
         private class EnumDataContractCriticalHelper : DataContract.DataContractCriticalHelper
         {
             private static Dictionary<Type, XmlQualifiedName> s_typeToName;
@@ -137,7 +101,7 @@ namespace System.Runtime.Serialization
                 Add(typeof(ulong), "unsignedLong");
             }
 
-            static internal void Add(Type type, string localName)
+            internal static void Add(Type type, string localName)
             {
                 XmlQualifiedName stableName = CreateQualifiedName(localName, Globals.SchemaNamespace);
                 s_typeToName.Add(type, stableName);
@@ -154,7 +118,7 @@ namespace System.Runtime.Serialization
                 this.StableName = DataContract.GetStableName(type, out _hasDataContract);
                 Type baseType = Enum.GetUnderlyingType(type);
                 ImportBaseType(baseType);
-                IsFlags = type.GetTypeInfo().IsDefined(Globals.TypeOfFlagsAttribute, false);
+                IsFlags = type.IsDefined(Globals.TypeOfFlagsAttribute, false);
                 ImportDataMembers();
 
                 XmlDictionary dictionary = new XmlDictionary(2 + Members.Count);
@@ -180,11 +144,13 @@ namespace System.Runtime.Serialization
             internal List<DataMember> Members
             {
                 get { return _members; }
+                set { _members = value; }
             }
 
             internal List<long> Values
             {
                 get { return _values; }
+                set { _values = value; }
             }
 
             internal bool IsFlags
@@ -196,11 +162,13 @@ namespace System.Runtime.Serialization
             internal bool IsULong
             {
                 get { return _isULong; }
+                set { _isULong = value; }
             }
 
             internal XmlDictionaryString[] ChildElementNames
             {
                 get { return _childElementNames; }
+                set { _childElementNames = value; }
             }
 
             private void ImportBaseType(Type baseType)
@@ -248,10 +216,13 @@ namespace System.Runtime.Serialization
                     }
                     else
                     {
-                        DataMember memberContract = new DataMember(field);
-                        memberContract.Name = field.Name;
-                        ClassDataContract.CheckAndAddMember(tempMembers, memberContract, memberValuesTable);
-                        enumMemberValid = true;
+                        if (!field.IsNotSerialized)
+                        {
+                            DataMember memberContract = new DataMember(field);
+                            memberContract.Name = field.Name;
+                            ClassDataContract.CheckAndAddMember(tempMembers, memberContract, memberValuesTable);
+                            enumMemberValid = true;
+                        }
                     }
 
                     if (enumMemberValid)

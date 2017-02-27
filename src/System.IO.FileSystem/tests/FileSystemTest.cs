@@ -1,59 +1,62 @@
-﻿// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using System;
-using System.IO;
-using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using Xunit;
 
-namespace System.IO.FileSystem.Tests
+namespace System.IO.Tests
 {
-    public abstract class FileSystemTest : IDisposable
+    public abstract class FileSystemTest : FileCleanupTestBase
     {
         public static readonly byte[] TestBuffer = { 0xBA, 0x5E, 0xBA, 0x11, 0xF0, 0x07, 0xBA, 0x11 };
 
-        public string TestDirectory { get; private set; }
+        protected const TestPlatforms CaseInsensitivePlatforms = TestPlatforms.Windows | TestPlatforms.OSX;
+        protected const TestPlatforms CaseSensitivePlatforms = TestPlatforms.AnyUnix & ~TestPlatforms.OSX;
 
-        public FileSystemTest()
+        public static bool AreAllLongPathsAvailable => PathFeatures.AreAllLongPathsAvailable();
+
+        public static bool LongPathsAreNotBlocked => !PathFeatures.AreLongPathsBlocked();
+
+        public static bool UsingNewNormalization => !PathFeatures.IsUsingLegacyPathNormalization();
+
+        public static TheoryData<string> PathsWithInvalidColons => TestData.PathsWithInvalidColons;
+
+        public static TheoryData<string> PathsWithInvalidCharacters => TestData.PathsWithInvalidCharacters;
+
+        /// <summary>
+        /// In some cases (such as when running without elevated privileges),
+        /// the symbolic link may fail to create. Only run this test if it creates
+        /// links successfully.
+        /// </summary>
+        protected static bool CanCreateSymbolicLinks
         {
-            // Use a unique test directory per test class
-            TestDirectory = Path.Combine(Directory.GetCurrentDirectory(), GetType().Name);
-
-            try
+            get
             {
-                Directory.CreateDirectory(TestDirectory);
-            }
-            catch 
-            {
-                // Don't want this to crash the test, we'll fail appropriately in other test 
-                // cases if Directory.Create is broken.
-            }
-        }
+                bool success = true;
 
-        // Generates a test file path to use that is unique name per test case / call
-        public string GetTestFilePath([CallerMemberName]string fileName = null, [CallerLineNumber] int lineNumber = 0)
-        {
-            return Path.Combine(TestDirectory, String.Format("{0}_{1}", fileName ?? "testFile", lineNumber));
-        }
+                // Verify file symlink creation
+                string path = Path.GetTempFileName();
+                string linkPath = path + ".link";
+                success = MountHelper.CreateSymbolicLink(linkPath, path, isDirectory: false);
+                try { File.Delete(path); } catch { }
+                try { File.Delete(linkPath); } catch { }
 
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
+                // Verify directory symlink creation
+                path = Path.GetTempFileName();
+                linkPath = path + ".link";
+                success = success && MountHelper.CreateSymbolicLink(linkPath, path, isDirectory: true);
+                try { Directory.Delete(path); } catch { }
+                try { Directory.Delete(linkPath); } catch { }
 
-        protected void Dispose(bool disposing)
-        {
-            // if (disposing)  no managed resources
-
-            // clean up non-managed resources
-            try
-            {
-                Directory.Delete(TestDirectory, true);
-            }
-            catch
-            {
-                // Don't throw during dispose
+                return success;
             }
         }
+
+        [DllImport("libc", SetLastError = true)]
+        protected static extern int geteuid();
+
+        [DllImport("libc", SetLastError = true)]
+        protected static extern int mkfifo(string path, int mode);
     }
 }

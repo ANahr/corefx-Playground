@@ -1,19 +1,20 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using System;
-using System.IO;
-using System.Linq;
-using System.Text;
 using Xunit;
 
-namespace System.IO.FileSystem.Tests
+namespace System.IO.Tests
 {
-    public partial class DirectoryInfo_Delete : FileSystemTest
+    public class DirectoryInfo_Delete : Directory_Delete_str
     {
+        public override void Delete(string path)
+        {
+            new DirectoryInfo(path).Delete();
+        }
+
         [Fact]
-        [ActiveIssue(1223)]
-        public void RegularDirectory()
+        public void ExistsDoesntRefreshOnDelete()
         {
             DirectoryInfo dir = Directory.CreateDirectory(Path.Combine(TestDirectory, Path.GetRandomFileName()));
 
@@ -21,27 +22,22 @@ namespace System.IO.FileSystem.Tests
 
             dir.Delete();
 
+            Assert.True(dir.Exists);
+            dir.Refresh();
             Assert.False(dir.Exists);
         }
+    }
 
-        [Fact]
-        public void NonEmptyDirectory()
+    public class DirectoryInfo_Delete_bool : Directory_Delete_str_bool
+    {
+        public override void Delete(string path)
         {
-            string dirName = "NonEmptyDirectory";
-            string subDirName = "ExtraDir";
-            Directory.CreateDirectory(Path.Combine(TestDirectory, dirName, subDirName));
-
-            Assert.Throws<IOException>(() => new DirectoryInfo(Path.Combine(TestDirectory, dirName)).Delete());
-
-            new DirectoryInfo(Path.Combine(TestDirectory, dirName, subDirName)).Delete();
-            new DirectoryInfo(Path.Combine(TestDirectory, dirName)).Delete();
-            Assert.False(new DirectoryInfo(Path.Combine(TestDirectory, dirName)).Exists);
+            new DirectoryInfo(path).Delete(false);
         }
 
-        [Fact]
-        public void DeleteRoot()
+        public override void Delete(string path, bool recursive)
         {
-            Assert.Throws<IOException>(() => new DirectoryInfo("C:\\").Delete());
+            new DirectoryInfo(path).Delete(recursive);
         }
     }
 }

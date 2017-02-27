@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System;
 using System.Collections.Generic;
@@ -13,32 +14,15 @@ using System.Reflection;
 
 namespace Microsoft.CSharp.RuntimeBinder
 {
-    internal class RuntimeBinder
+    internal sealed class RuntimeBinder
     {
         #region Singleton Implementation
 
-        // The double checking lock, static lock initializer, and volatile instance
-        // field are all here to make the singleton thread-safe. Please see Richter,
-        // "CLR via C#" Ch. 24 for more information. This implementation was chosen
-        // because construction of the RuntimeBinder is expensive.
-
-        private static readonly object s_singletonLock = new object();
-        private static volatile RuntimeBinder s_instance;
+        private static readonly Lazy<RuntimeBinder> s_lazyInstance = new Lazy<RuntimeBinder>(() => new RuntimeBinder());
 
         public static RuntimeBinder GetInstance()
         {
-            if (s_instance == null)
-            {
-                lock (s_singletonLock)
-                {
-                    if (s_instance == null)
-                    {
-                        s_instance = new RuntimeBinder();
-                    }
-                }
-            }
-
-            return s_instance;
+            return s_lazyInstance.Value;
         }
 
         #endregion
@@ -63,7 +47,7 @@ namespace Microsoft.CSharp.RuntimeBinder
         // value's type because unless the static time type was dynamic, we want to use the
         // static time type. Also, we may have null values, in which case we would not be 
         // able to get the type.
-        private class ArgumentObject
+        private sealed class ArgumentObject
         {
             internal Type Type;
             internal object Value;
@@ -74,7 +58,7 @@ namespace Microsoft.CSharp.RuntimeBinder
         // Methods
 
         #region BookKeeping
-        public RuntimeBinder()
+        private RuntimeBinder()
         {
             Reset();
         }
@@ -201,7 +185,7 @@ namespace Microsoft.CSharp.RuntimeBinder
 
             // On any given bind call, we populate the symbol table with any new
             // conversions that we find for any of the types specified. We keep a
-            // running SymbolTable so that we dont have to reflect over types if 
+            // running SymbolTable so that we don't have to reflect over types if 
             // we've seen them already in the table.
             //
             // Once we've loaded all the standard conversions into the symbol table,
@@ -215,7 +199,7 @@ namespace Microsoft.CSharp.RuntimeBinder
             //
             // 1) Create a local variable scope which contains local variable symbols
             //    for each of the parameters, and the instance argument.
-            // 2) If we have operators, then we dont need to do lookup. Otherwise, 
+            // 2) If we have operators, then we don't need to do lookup. Otherwise, 
             //    look for the name and switch on the result - dispatch according to 
             //    the symbol kind. This results in an EXPR being bound that is the expression.
             // 3) Create the EXPRRETURN which returns the call and wrap it in
@@ -268,7 +252,7 @@ namespace Microsoft.CSharp.RuntimeBinder
             if (payload is CSharpInvokeMemberBinder)
             {
                 ICSharpInvokeOrInvokeMemberBinder callPayload = payload as ICSharpInvokeOrInvokeMemberBinder;
-                int arity = callPayload.TypeArguments != null ? callPayload.TypeArguments.Count : 0;
+                int arity = callPayload.TypeArguments?.Count ?? 0;
                 MemberLookup mem = new MemberLookup();
                 EXPR callingObject = CreateCallingObjectForCall(callPayload, arguments, dictionary);
 
@@ -287,7 +271,7 @@ namespace Microsoft.CSharp.RuntimeBinder
                     // The GetMember only has one argument, and we need to just take the first arg info.
                     CSharpGetMemberBinder getMember = new CSharpGetMemberBinder(callPayload.Name, false, callPayload.CallingContext, new CSharpArgumentInfo[] { callPayload.ArgumentInfo[0] });
 
-                    // The Invoke has the remainig argument infos. However, we need to redo the first one
+                    // The Invoke has the remaining argument infos. However, we need to redo the first one
                     // to correspond to the GetMember result.
                     CSharpArgumentInfo[] argInfos = new CSharpArgumentInfo[callPayload.ArgumentInfo.Count];
                     callPayload.ArgumentInfo.CopyTo(argInfos, 0);
@@ -454,7 +438,7 @@ namespace Microsoft.CSharp.RuntimeBinder
                     {
                         // If we have a ref our an out parameter, make the byref type.
                         // If we have the receiver of a call or invoke that is ref, it must be because of 
-                        // a struct caller. Dont persist the ref for that.
+                        // a struct caller. Don't persist the ref for that.
                         if (!(index == 0 && IsBinderThatCanHaveRefReceiver(p)))
                         {
                             t = t.MakeByRefType();
@@ -473,16 +457,12 @@ namespace Microsoft.CSharp.RuntimeBinder
                         CType bestType;
 
                         bool res = _semanticChecker.GetTypeManager().GetBestAccessibleType(_semanticChecker, _bindingContext, actualType, out bestType);
-                        if (!res)
-                        {
-                            // Since the actual type of these arguments are never going to be pointer
-                            // types or ref/out types (they are in fact boxed into an object), we have
-                            // a guarantee that we will always be able to find a best accessible type
-                            // (which, in the worst case, may be object). However, just to be super
-                            // paranoid, let's not let a null type get back into the system.
-                            Debug.Assert(false, "Unexpected failure of GetBestAccessibleType in construction of argument array");
-                            t = typeof(object);
-                        }
+                        
+                        // Since the actual type of these arguments are never going to be pointer
+                        // types or ref/out types (they are in fact boxed into an object), we have
+                        // a guarantee that we will always be able to find a best accessible type
+                        // (which, in the worst case, may be object).
+                        Debug.Assert(res, "Unexpected failure of GetBestAccessibleType in construction of argument array");
 
                         t = bestType.AssociatedSystemType;
                     }
@@ -535,12 +515,12 @@ namespace Microsoft.CSharp.RuntimeBinder
 
                 if (callOrInvoke.StaticCall)
                 {
-                    if (arguments[0].Value == null || !(arguments[0].Value is Type))
+                    type = arguments[0].Value as Type;
+                    if (type == null)
                     {
                         Debug.Assert(false, "Cannot make static call without specifying a type");
                         throw Error.InternalCompilerError();
                     }
-                    type = arguments[0].Value as Type;
                 }
                 else
                 {
@@ -719,7 +699,7 @@ namespace Microsoft.CSharp.RuntimeBinder
         // We take the ArgumentObjects to verify - if the parameter expression tells us 
         // we have a ref parameter, but the argument object tells us we're not passed by ref,
         // then it means it was a ref that the compiler had to insert. This is used when
-        // we have a call off of a struct for example. If thats the case, dont treat the 
+        // we have a call off of a struct for example. If thats the case, don't treat the 
         // local as a ref type.
 
         private void PopulateLocalScope(
@@ -738,7 +718,7 @@ namespace Microsoft.CSharp.RuntimeBinder
                 CType type = _symbolTable.GetCTypeFromType(parameter.Type);
 
                 // Make sure we're not setting ref for the receiver of a call - the argument
-                // will be marked as ref if we're calling off a struct, but we dont want 
+                // will be marked as ref if we're calling off a struct, but we don't want 
                 // to persist that in our system.
                 bool isFirstParamOfCallOrInvoke = false;
                 if (i == 0 && IsBinderThatCanHaveRefReceiver(payload))
@@ -751,7 +731,7 @@ namespace Microsoft.CSharp.RuntimeBinder
                     (arguments[i].Info.IsByRef || arguments[i].Info.IsOut))
                 {
                     // If we're the first param of a call or invoke, and we're ref, it must be
-                    // because of structs. Dont persist the parameter modifier type.
+                    // because of structs. Don't persist the parameter modifier type.
                     if (!isFirstParamOfCallOrInvoke)
                     {
                         type = _semanticChecker.GetTypeManager().GetParameterModifier(type, arguments[i].Info.IsOut);
@@ -772,7 +752,7 @@ namespace Microsoft.CSharp.RuntimeBinder
             Scope pScope,
             EXPR call)
         {
-            // We dont actually need the real delegate type here - we just need SOME delegate type.
+            // We don't actually need the real delegate type here - we just need SOME delegate type.
             // This is because we never attempt any conversions on the lambda itself.
             AggregateType delegateType = _symbolTable.GetCTypeFromType(typeof(Func<>)).AsAggregateType();
             LocalVariableSymbol thisLocal = _semanticChecker.GetGlobalSymbolFactory().CreateLocalVar(_semanticChecker.GetNameManager().Add("this"), pScope, _symbolTable.GetCTypeFromType(typeof(object)));
@@ -955,7 +935,7 @@ namespace Microsoft.CSharp.RuntimeBinder
             // The C# binder expects that only the base virtual method is inserted
             // into the list of candidates, and only the type containing the base
             // virtual method is inserted into the list of types. However, since we
-            // dont want to do all the logic, we're just going to insert every type
+            // don't want to do all the logic, we're just going to insert every type
             // that has a member of the given name, and allow the C# binder to filter
             // out all overrides.
             //
@@ -1065,7 +1045,7 @@ namespace Microsoft.CSharp.RuntimeBinder
             PropWithType pwt = new PropWithType(property, propertyType);
             EXPRMEMGRP pMemGroup = CreateMemberGroupEXPR(property.name.Text, null, callingObject, SYMKIND.SK_PropertySymbol);
 
-            return _binder.BindToProperty(// For a static property instance, dont set the object.
+            return _binder.BindToProperty(// For a static property instance, don't set the object.
                     callingObject.isCLASS() ? null : callingObject, pwt, flags, null, null, pMemGroup);
         }
 
@@ -1132,13 +1112,14 @@ namespace Microsoft.CSharp.RuntimeBinder
             EXPR callingObject;
             if (payload.StaticCall)
             {
-                if (arguments[0].Value == null || !(arguments[0].Value is Type))
+                Type t = arguments[0].Value as Type;
+                if (t == null)
                 {
                     Debug.Assert(false, "Cannot make static call without specifying a type");
                     throw Error.InternalCompilerError();
                 }
-                Type t = arguments[0].Value as Type;
-                callingObject = _exprFactory.CreateClass(_symbolTable.GetCTypeFromType(t), null, t.GetTypeInfo().ContainsGenericParameters ?
+
+                callingObject = _exprFactory.CreateClass(_symbolTable.GetCTypeFromType(t), null, t.ContainsGenericParameters ?
                         _exprFactory.CreateTypeArguments(SymbolLoader.getBSymmgr().AllocParams(_symbolTable.GetCTypeArrayFromTypes(t.GetGenericArguments())), null) : null);
             }
             else
@@ -1153,7 +1134,7 @@ namespace Microsoft.CSharp.RuntimeBinder
                     CreateArgumentEXPR(arguments[0], dictionary[0]),
                     _symbolTable.GetCTypeFromType(arguments[0].Type));
 
-                if (arguments[0].Type.GetTypeInfo().IsValueType && callingObject.isCAST())
+                if (arguments[0].Type.IsValueType && callingObject.isCAST())
                 {
                     // If we have a struct type, unbox it.
                     callingObject.flags |= EXPRFLAG.EXF_UNBOXRUNTIME;
@@ -1176,7 +1157,7 @@ namespace Microsoft.CSharp.RuntimeBinder
             }
 
             EXPR pResult = null;
-            int arity = payload.TypeArguments != null ? payload.TypeArguments.Count : 0;
+            int arity = payload.TypeArguments?.Count ?? 0;
             MemberLookup mem = new MemberLookup();
 
             Debug.Assert(_bindingContext.ContextForMemberLookup() != null);
@@ -1422,7 +1403,7 @@ namespace Microsoft.CSharp.RuntimeBinder
                 {
                     EXPR pArg = argInfo.prgexpr[i];
 
-                    // Strip the name-ness away, since we dont need it.
+                    // Strip the name-ness away, since we don't need it.
                     pArg = StripNamedArgument(pArg);
 
                     // Perform the correct conversion.
@@ -1764,7 +1745,7 @@ namespace Microsoft.CSharp.RuntimeBinder
             }
 
             // If our argument is a struct type, unbox it.
-            if (argument.Type.GetTypeInfo().IsValueType && callingObject.isCAST())
+            if (argument.Type.IsValueType && callingObject.isCAST())
             {
                 // If we have a struct type, unbox it.
                 callingObject.flags |= EXPRFLAG.EXF_UNBOXRUNTIME;
@@ -1917,7 +1898,6 @@ namespace Microsoft.CSharp.RuntimeBinder
             string name = GetName(payload);
 
             // Find the lhs and rhs.
-            EXPR lhs;
             EXPR indexerArguments = null;
             bool bIsCompound = false;
 
@@ -1932,7 +1912,7 @@ namespace Microsoft.CSharp.RuntimeBinder
                 bIsCompound = (payload as CSharpSetMemberBinder).IsCompoundAssignment;
             }
             _symbolTable.PopulateSymbolTableWithName(name, null, arguments[0].Type);
-            lhs = BindProperty(payload, arguments[0], dictionary[0], indexerArguments, false);
+            EXPR lhs = BindProperty(payload, arguments[0], dictionary[0], indexerArguments, false);
 
             int indexOfLast = arguments.Length - 1;
             EXPR rhs = CreateArgumentEXPR(arguments[indexOfLast], dictionary[indexOfLast]);

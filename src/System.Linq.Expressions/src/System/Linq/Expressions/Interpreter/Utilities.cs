@@ -1,33 +1,18 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Reflection;
-using System.Threading;
 using System.Dynamic.Utils;
-using AstUtils = System.Linq.Expressions.Interpreter.Utils;
+using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Runtime.ExceptionServices;
+using System.Threading;
 
 namespace System.Linq.Expressions.Interpreter
 {
-    internal sealed class ExplicitBox : IStrongBox
-    {
-        public object Value { get; set; }
-
-        public ExplicitBox()
-        {
-        }
-
-        public ExplicitBox(object value)
-        {
-            this.Value = value;
-        }
-    }
-
+#if FEATURE_MAKE_RUN_METHODS
     internal static partial class DelegateHelpers
     {
         private const int MaximumArity = 17;
@@ -42,7 +27,7 @@ namespace System.Linq.Expressions.Interpreter
             // the arity is small enough to fit in Func<...> or Action<...>
             if (types.Length > MaximumArity || types.Any(t => t.IsByRef))
             {
-                throw Assert.Unreachable;
+                throw ContractUtils.Unreachable;
             }
 
             Type returnType = types[types.Length - 1];
@@ -94,134 +79,100 @@ namespace System.Linq.Expressions.Interpreter
                     case 17: return typeof(Func<,,,,,,,,,,,,,,,,>).MakeGenericType(types);
                 }
             }
-            throw Assert.Unreachable;
+            throw ContractUtils.Unreachable;
         }
     }
+#endif
 
-    internal class ScriptingRuntimeHelpers
+    internal static class ScriptingRuntimeHelpers
     {
         public static object Int32ToObject(int i)
         {
+            switch (i)
+            {
+                case -1:
+                    return Utils.BoxedIntM1;
+                case 0:
+                    return Utils.BoxedInt0;
+                case 1:
+                    return Utils.BoxedInt1;
+                case 2:
+                    return Utils.BoxedInt2;
+                case 3:
+                    return Utils.BoxedInt3;
+            }
+
             return i;
         }
-        public static object BooleanToObject(bool b)
-        {
-            return b ? True : False;
-        }
-
-        internal static object True = true;
-        internal static object False = false;
 
         internal static object GetPrimitiveDefaultValue(Type type)
         {
-            switch (System.Dynamic.Utils.TypeExtensions.GetTypeCode(type))
+            object result;
+
+            switch (type.GetTypeCode())
             {
-                case TypeCode.Boolean: return ScriptingRuntimeHelpers.False;
-                case TypeCode.SByte: return default(SByte);
-                case TypeCode.Byte: return default(Byte);
-                case TypeCode.Char: return default(Char);
-                case TypeCode.Int16: return default(Int16);
-                case TypeCode.Int32: return ScriptingRuntimeHelpers.Int32ToObject(0);
-                case TypeCode.Int64: return default(Int64);
-                case TypeCode.UInt16: return default(UInt16);
-                case TypeCode.UInt32: return default(UInt32);
-                case TypeCode.UInt64: return default(UInt64);
-                case TypeCode.Single: return default(Single);
-                case TypeCode.Double: return default(Double);
-                //            case TypeCode.DBNull: return default(DBNull);
-                case TypeCode.DateTime: return default(DateTime);
-                case TypeCode.Decimal: return default(Decimal);
-                default: return null;
+                case TypeCode.Boolean:
+                    result = Utils.BoxedFalse;
+                    break;
+                case TypeCode.SByte:
+                    result = Utils.BoxedDefaultSByte;
+                    break;
+                case TypeCode.Byte:
+                    result = Utils.BoxedDefaultByte;
+                    break;
+                case TypeCode.Char:
+                    result = Utils.BoxedDefaultChar;
+                    break;
+                case TypeCode.Int16:
+                    result = Utils.BoxedDefaultInt16;
+                    break;
+                case TypeCode.Int32:
+                    result = Utils.BoxedInt0;
+                    break;
+                case TypeCode.Int64:
+                    result = Utils.BoxedDefaultInt64;
+                    break;
+                case TypeCode.UInt16:
+                    result = Utils.BoxedDefaultUInt16;
+                    break;
+                case TypeCode.UInt32:
+                    result = Utils.BoxedDefaultUInt32;
+                    break;
+                case TypeCode.UInt64:
+                    result = Utils.BoxedDefaultUInt64;
+                    break;
+                case TypeCode.Single:
+                    return Utils.BoxedDefaultSingle;
+                case TypeCode.Double:
+                    return Utils.BoxedDefaultDouble;
+                case TypeCode.DateTime:
+                    return Utils.BoxedDefaultDateTime;
+                case TypeCode.Decimal:
+                    return Utils.BoxedDefaultDecimal;
+                default:
+                    // Also covers DBNull which is a class.
+                    return null;
             }
-        }
-    }
 
-    /// <summary>
-    /// Wraps all arguments passed to a dynamic site with more arguments than can be accepted by a Func/Action delegate.
-    /// The binder generating a rule for such a site should unwrap the arguments first and then perform a binding to them.
-    /// </summary>
-    internal sealed class ArgumentArray
-    {
-        private readonly object[] _arguments;
+            if (type.IsEnum)
+            {
+                result = Enum.ToObject(type, result);
+            }
 
-        // the index of the first item _arguments that represents an argument:
-        private readonly int _first;
-
-        // the number of items in _arguments that represent the arguments:
-        private readonly int _count;
-
-        internal ArgumentArray(object[] arguments, int first, int count)
-        {
-            _arguments = arguments;
-            _first = first;
-            _count = count;
-        }
-
-        public int Count
-        {
-            get { return _count; }
-        }
-
-        public object GetArgument(int index)
-        {
-            return _arguments[_first + index];
-        }
-
-        public static object GetArg(ArgumentArray array, int index)
-        {
-            return array._arguments[array._first + index];
+            return result;
         }
     }
 
     internal static class ExceptionHelpers
     {
-        private const string prevStackTraces = "PreviousStackTraces";
-
         /// <summary>
         /// Updates an exception before it's getting re-thrown so
         /// we can present a reasonable stack trace to the user.
         /// </summary>
-        public static Exception UpdateForRethrow(Exception rethrow)
+        public static void UnwrapAndRethrow(TargetInvocationException exception)
         {
-#if FEATURE_STACK_TRACES
-            List<StackTrace> prev;
-
-            // we don't have any dynamic stack trace data, capture the data we can
-            // from the raw exception object.
-            StackTrace st = new StackTrace(rethrow, true);
-
-            if (!TryGetAssociatedStackTraces(rethrow, out prev))
-            {
-                prev = new List<StackTrace>();
-                AssociateStackTraces(rethrow, prev);
-            }
-
-            prev.Add(st);
-
-#endif // FEATURE_STACK_TRACES
-            return rethrow;
+            ExceptionDispatchInfo.Capture(exception.InnerException).Throw();
         }
-#if FEATURE_STACK_TRACES
-        /// <summary>
-        /// Returns all the stack traces associates with an exception
-        /// </summary>
-        public static IList<StackTrace> GetExceptionStackTraces(Exception rethrow)
-        {
-            List<StackTrace> result;
-            return TryGetAssociatedStackTraces(rethrow, out result) ? result : null;
-        }
-
-        private static void AssociateStackTraces(Exception e, List<StackTrace> traces)
-        {
-            e.Data[prevStackTraces] = traces;
-        }
-
-        private static bool TryGetAssociatedStackTraces(Exception e, out List<StackTrace> traces)
-        {
-            traces = e.Data[prevStackTraces] as List<StackTrace>;
-            return traces != null;
-        }
-#endif // FEATURE_STACK_TRACES
     }
 
     /// <summary>
@@ -232,22 +183,10 @@ namespace System.Linq.Expressions.Interpreter
         private KeyValuePair<TKey, TValue>[] _keysAndValues;
         private Dictionary<TKey, TValue> _dict;
         private int _count;
-        private const int _arraySize = 10;
+        private const int ArraySize = 10;
 
         public HybridReferenceDictionary()
         {
-        }
-
-        public HybridReferenceDictionary(int initialCapicity)
-        {
-            if (initialCapicity > _arraySize)
-            {
-                _dict = new Dictionary<TKey, TValue>(initialCapicity);
-            }
-            else
-            {
-                _keysAndValues = new KeyValuePair<TKey, TValue>[initialCapicity];
-            }
         }
 
         public bool TryGetValue(TKey key, out TValue value)
@@ -398,7 +337,7 @@ namespace System.Linq.Expressions.Interpreter
                     }
                     else
                     {
-                        _keysAndValues = new KeyValuePair<TKey, TValue>[_arraySize];
+                        _keysAndValues = new KeyValuePair<TKey, TValue>[ArraySize];
                         index = 0;
                     }
 
@@ -423,194 +362,12 @@ namespace System.Linq.Expressions.Interpreter
         }
     }
 
-    /// <summary>
-    /// Provides a dictionary-like object used for caches which holds onto a maximum
-    /// number of elements specified at construction time.
-    /// 
-    /// This class is not thread safe.
-    /// </summary>
-    internal class CacheDict<TKey, TValue>
-    {
-        private readonly Dictionary<TKey, KeyInfo> _dict = new Dictionary<TKey, KeyInfo>();
-        private readonly LinkedList<TKey> _list = new LinkedList<TKey>();
-        private readonly int _maxSize;
-
-        /// <summary>
-        /// Creates a dictionary-like object used for caches.
-        /// </summary>
-        /// <param name="maxSize">The maximum number of elements to store.</param>
-        public CacheDict(int maxSize)
-        {
-            _maxSize = maxSize;
-        }
-
-        /// <summary>
-        /// Tries to get the value associated with 'key', returning true if it's found and
-        /// false if it's not present.
-        /// </summary>
-        public bool TryGetValue(TKey key, out TValue value)
-        {
-            KeyInfo storedValue;
-            if (_dict.TryGetValue(key, out storedValue))
-            {
-                LinkedListNode<TKey> node = storedValue.List;
-                if (node.Previous != null)
-                {
-                    // move us to the head of the list...
-                    _list.Remove(node);
-                    _list.AddFirst(node);
-                }
-
-                value = storedValue.Value;
-                return true;
-            }
-
-            value = default(TValue);
-            return false;
-        }
-
-        /// <summary>
-        /// Adds a new element to the cache, replacing and moving it to the front if the
-        /// element is already present.
-        /// </summary>
-        public void Add(TKey key, TValue value)
-        {
-            KeyInfo keyInfo;
-            if (_dict.TryGetValue(key, out keyInfo))
-            {
-                // remove original entry from the linked list
-                _list.Remove(keyInfo.List);
-            }
-            else if (_list.Count == _maxSize)
-            {
-                // we've reached capacity, remove the last used element...
-                LinkedListNode<TKey> node = _list.Last;
-                _list.RemoveLast();
-                bool res = _dict.Remove(node.Value);
-                Debug.Assert(res);
-            }
-
-            // add the new entry to the head of the list and into the dictionary
-            LinkedListNode<TKey> listNode = new LinkedListNode<TKey>(key);
-            _list.AddFirst(listNode);
-            _dict[key] = new CacheDict<TKey, TValue>.KeyInfo(value, listNode);
-        }
-
-        /// <summary>
-        /// Returns the value associated with the given key, or throws KeyNotFoundException
-        /// if the key is not present.
-        /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1065:DoNotRaiseExceptionsInUnexpectedLocations")]
-        public TValue this[TKey key]
-        {
-            get
-            {
-                TValue res;
-                if (TryGetValue(key, out res))
-                {
-                    return res;
-                }
-                throw new KeyNotFoundException();
-            }
-            set
-            {
-                Add(key, value);
-            }
-        }
-
-        private struct KeyInfo
-        {
-            internal readonly TValue Value;
-            internal readonly LinkedListNode<TKey> List;
-
-            internal KeyInfo(TValue value, LinkedListNode<TKey> list)
-            {
-                Value = value;
-                List = list;
-            }
-        }
-    }
-
     internal static class Assert
     {
-        internal static Exception Unreachable
-        {
-            get
-            {
-                Debug.Assert(false, "Unreachable");
-                return new InvalidOperationException("Code supposed to be unreachable");
-            }
-        }
-
         [Conditional("DEBUG")]
         public static void NotNull(object var)
         {
             Debug.Assert(var != null);
-        }
-
-        [Conditional("DEBUG")]
-        public static void NotNull(object var1, object var2)
-        {
-            Debug.Assert(var1 != null && var2 != null);
-        }
-
-        [Conditional("DEBUG")]
-        public static void NotNull(object var1, object var2, object var3)
-        {
-            Debug.Assert(var1 != null && var2 != null && var3 != null);
-        }
-
-        [Conditional("DEBUG")]
-        public static void NotNullItems<T>(IEnumerable<T> items) where T : class
-        {
-            Debug.Assert(items != null);
-            foreach (object item in items)
-            {
-                Debug.Assert(item != null);
-            }
-        }
-
-        [Conditional("DEBUG")]
-        public static void NotEmpty(string str)
-        {
-            Debug.Assert(!String.IsNullOrEmpty(str));
-        }
-    }
-
-    [Flags]
-    internal enum ExpressionAccess
-    {
-        None = 0,
-        Read = 1,
-        Write = 2,
-        ReadWrite = Read | Write,
-    }
-
-    internal static class Utils
-    {
-        private static readonly DefaultExpression s_voidInstance = Expression.Empty();
-
-        public static DefaultExpression Empty()
-        {
-            return s_voidInstance;
-        }
-    }
-
-    internal sealed class ListEqualityComparer<T> : EqualityComparer<ICollection<T>>
-    {
-        internal static readonly ListEqualityComparer<T> Instance = new ListEqualityComparer<T>();
-
-        private ListEqualityComparer() { }
-
-        // EqualityComparer<T> handles null and object identity for us
-        public override bool Equals(ICollection<T> x, ICollection<T> y)
-        {
-            return x.ListEquals(y);
-        }
-
-        public override int GetHashCode(ICollection<T> obj)
-        {
-            return obj.ListHashCode();
         }
     }
 }

@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using Xunit;
 
@@ -29,6 +30,7 @@ namespace ManagedTests.DynamicCSharp.Conformance.dynamic.context.indexer.genclas
 
     public class MemberClass<T>
     {
+        [ThreadStatic]
         public static int Status;
         public bool? this[string p1, float p2, short[] p3]
         {
@@ -238,6 +240,7 @@ namespace ManagedTests.DynamicCSharp.Conformance.dynamic.context.indexer.genclas
     public class MemberClassWithClassConstraint<T>
         where T : class
     {
+        [ThreadStatic]
         public static int Status;
         public int this[int x]
         {
@@ -271,6 +274,7 @@ namespace ManagedTests.DynamicCSharp.Conformance.dynamic.context.indexer.genclas
     public class MemberClassWithNewConstraint<T>
         where T : new()
     {
+        [ThreadStatic]
         public static int Status;
         public dynamic this[T t]
         {

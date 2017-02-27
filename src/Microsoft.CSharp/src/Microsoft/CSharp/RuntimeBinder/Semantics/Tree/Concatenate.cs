@@ -1,14 +1,15 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 namespace Microsoft.CSharp.RuntimeBinder.Semantics
 {
-    internal class EXPRCONCAT : EXPR
+    internal sealed class EXPRCONCAT : EXPR
     {
-        public EXPR FirstArgument;
+        private EXPR FirstArgument;
         public EXPR GetFirstArgument() { return FirstArgument; }
         public void SetFirstArgument(EXPR value) { FirstArgument = value; }
-        public EXPR SecondArgument;
+        private EXPR SecondArgument;
         public EXPR GetSecondArgument() { return SecondArgument; }
         public void SetSecondArgument(EXPR value) { SecondArgument = value; }
     }

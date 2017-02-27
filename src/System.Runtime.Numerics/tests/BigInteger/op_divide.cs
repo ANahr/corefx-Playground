@@ -1,7 +1,7 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
-using Tools;
 using Xunit;
 
 namespace System.Numerics.Tests
@@ -46,7 +46,7 @@ namespace System.Numerics.Tests
             }
         }
 
-        [Fact]
+        [ConditionalFact(nameof(PlatformDetection) + "." + nameof(PlatformDetection.IsNotWindowsSubsystemForLinux))] // https://github.com/Microsoft/BashOnWindows/issues/513
         public static void RunDivideNegative()
         {
             byte[] tempByteArray1 = new byte[0];
@@ -129,6 +129,17 @@ namespace System.Numerics.Tests
             VerifyDivideString(Math.Pow(2, 33) + " 2 b/");
         }
 
+        [Fact]
+        public static void RunOverflow()
+        {
+            // these values lead to an "overflow", if dividing digit by digit
+            // we need to ensure that this case is being handled accordingly...
+            var x = new BigInteger(new byte[] { 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFE, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0 });
+            var y = new BigInteger(new byte[] { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0 });
+            var z = new BigInteger(new byte[] { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0 });
+
+            Assert.Equal(z, x / y);
+        }
 
         private static void VerifyDivideString(string opstring)
         {

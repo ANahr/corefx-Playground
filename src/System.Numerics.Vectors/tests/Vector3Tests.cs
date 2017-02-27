@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Globalization;
 using System.Runtime.InteropServices;
@@ -21,8 +22,14 @@ namespace System.Numerics.Tests
         {
             Vector3 v1 = new Vector3(2.0f, 3.0f, 3.3f);
 
-            Single[] a = new Single[4];
-            Single[] b = new Single[3];
+            float[] a = new float[4];
+            float[] b = new float[3];
+
+            Assert.Throws<NullReferenceException>(() => v1.CopyTo(null, 0));
+            Assert.Throws<ArgumentOutOfRangeException>(() => v1.CopyTo(a, -1));
+            Assert.Throws<ArgumentOutOfRangeException>(() => v1.CopyTo(a, a.Length));
+            Assert.Throws<ArgumentException>(() => v1.CopyTo(a, a.Length - 2));
+
             v1.CopyTo(a, 1);
             v1.CopyTo(b);
             Assert.Equal(0.0f, a[0]);
@@ -38,25 +45,25 @@ namespace System.Numerics.Tests
         public void Vector3GetHashCodeTest()
         {
             Vector3 v1 = new Vector3(2.0f, 3.0f, 3.3f);
-            Vector3 v2 = new Vector3(4.5f, 6.5f, 7.5f);
+            Vector3 v2 = new Vector3(2.0f, 3.0f, 3.3f);
             Vector3 v3 = new Vector3(2.0f, 3.0f, 3.3f);
             Vector3 v5 = new Vector3(3.0f, 2.0f, 3.3f);
-            Assert.True(v1.GetHashCode() == v1.GetHashCode());
-            Assert.False(v1.GetHashCode() == v5.GetHashCode());
-            Assert.True(v1.GetHashCode() == v3.GetHashCode());
+            Assert.Equal(v1.GetHashCode(), v1.GetHashCode());
+            Assert.Equal(v1.GetHashCode(), v2.GetHashCode());
+            Assert.NotEqual(v1.GetHashCode(), v5.GetHashCode());
+            Assert.Equal(v1.GetHashCode(), v3.GetHashCode());
             Vector3 v4 = new Vector3(0.0f, 0.0f, 0.0f);
             Vector3 v6 = new Vector3(1.0f, 0.0f, 0.0f);
             Vector3 v7 = new Vector3(0.0f, 1.0f, 0.0f);
             Vector3 v8 = new Vector3(1.0f, 1.0f, 1.0f);
             Vector3 v9 = new Vector3(1.0f, 1.0f, 0.0f);
-            Assert.False(v4.GetHashCode() == v6.GetHashCode());
-            Assert.False(v4.GetHashCode() == v7.GetHashCode());
-            Assert.False(v4.GetHashCode() == v8.GetHashCode());
-            Assert.False(v7.GetHashCode() == v6.GetHashCode());
-            Assert.False(v8.GetHashCode() == v6.GetHashCode());
-            Assert.True(v8.GetHashCode() == v7.GetHashCode());
-            Assert.False(v8.GetHashCode() == v9.GetHashCode());
-            Assert.False(v7.GetHashCode() == v9.GetHashCode());
+            Assert.NotEqual(v4.GetHashCode(), v6.GetHashCode());
+            Assert.NotEqual(v4.GetHashCode(), v7.GetHashCode());
+            Assert.NotEqual(v4.GetHashCode(), v8.GetHashCode());
+            Assert.NotEqual(v7.GetHashCode(), v6.GetHashCode());
+            Assert.NotEqual(v8.GetHashCode(), v6.GetHashCode());
+            Assert.NotEqual(v8.GetHashCode(), v9.GetHashCode());
+            Assert.NotEqual(v7.GetHashCode(), v9.GetHashCode());
         }
 
         [Fact]
@@ -663,7 +670,7 @@ namespace System.Numerics.Tests
 
         // A test for operator * (Vector3f, float)
         [Fact]
-        public void Vector3MultiplyTest()
+        public void Vector3MultiplyOperatorTest()
         {
             Vector3 a = new Vector3(1.0f, 2.0f, 3.0f);
 
@@ -677,9 +684,25 @@ namespace System.Numerics.Tests
             Assert.True(MathHelper.Equal(expected, actual), "Vector3f.operator * did not return the expected value.");
         }
 
+        // A test for operator * (float, Vector3f)
+        [Fact]
+        public void Vector3MultiplyOperatorTest2()
+        {
+            Vector3 a = new Vector3(1.0f, 2.0f, 3.0f);
+
+            const float factor = 2.0f;
+
+            Vector3 expected = new Vector3(2.0f, 4.0f, 6.0f);
+            Vector3 actual;
+
+            actual = factor * a;
+
+            Assert.True(MathHelper.Equal(expected, actual), "Vector3f.operator * did not return the expected value.");
+        }
+
         // A test for operator * (Vector3f, Vector3f)
         [Fact]
-        public void Vector3MultiplyTest1()
+        public void Vector3MultiplyOperatorTest3()
         {
             Vector3 a = new Vector3(1.0f, 2.0f, 3.0f);
 
@@ -895,12 +918,23 @@ namespace System.Numerics.Tests
 
         // A test for Multiply (Vector3f, float)
         [Fact]
-        public void Vector3MultiplyTest2()
+        public void Vector3MultiplyTest()
         {
             Vector3 a = new Vector3(1.0f, 2.0f, 3.0f);
-            float factor = 2.0f;
+            const float factor = 2.0f;
             Vector3 expected = new Vector3(2.0f, 4.0f, 6.0f);
             Vector3 actual = Vector3.Multiply(a, factor);
+            Assert.Equal(expected, actual);
+        }
+
+        // A test for Multiply (float, Vector3f)
+        [Fact]
+        public static void Vector3MultiplyTest2()
+        {
+            Vector3 a = new Vector3(1.0f, 2.0f, 3.0f);
+            const float factor = 2.0f;
+            Vector3 expected = new Vector3(2.0f, 4.0f, 6.0f);
+            Vector3 actual = Vector3.Multiply(factor, a);
             Assert.Equal(expected, actual);
         }
 

@@ -1,17 +1,17 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Diagnostics;
 using Microsoft.CSharp.RuntimeBinder.Errors;
-using Microsoft.CSharp.RuntimeBinder.Syntax;
 
 namespace Microsoft.CSharp.RuntimeBinder.Semantics
 {
-    internal class CNullable
+    internal sealed class CNullable
     {
-        private SymbolLoader _pSymbolLoader;
-        private ExprFactory _exprFactory;
-        private ErrorHandling _pErrorContext;
+        private readonly SymbolLoader _pSymbolLoader;
+        private readonly ExprFactory _exprFactory;
+        private readonly ErrorHandling _pErrorContext;
 
         private SymbolLoader GetSymbolLoader()
         {
@@ -25,7 +25,7 @@ namespace Microsoft.CSharp.RuntimeBinder.Semantics
         {
             return _pErrorContext;
         }
-        public static bool IsNullableConstructor(EXPR expr)
+        private static bool IsNullableConstructor(EXPR expr)
         {
             Debug.Assert(expr != null);
 
@@ -64,7 +64,7 @@ namespace Microsoft.CSharp.RuntimeBinder.Semantics
             Debug.Assert(exprSrc != null && exprSrc.type.IsNullableType());
 
             // For new T?(x), the answer is x.
-            if (CNullable.IsNullableConstructor(exprSrc))
+            if (IsNullableConstructor(exprSrc))
             {
                 Debug.Assert(exprSrc.asCALL().GetOptionalArguments() != null && !exprSrc.asCALL().GetOptionalArguments().isLIST());
                 return exprSrc.asCALL().GetOptionalArguments();
@@ -87,7 +87,7 @@ namespace Microsoft.CSharp.RuntimeBinder.Semantics
             }
 
             PropWithType pwt = new PropWithType(prop, ats);
-            MethWithType mwt = new MethWithType(prop != null ? prop.methGet : null, ats);
+            MethWithType mwt = new MethWithType(prop?.methGet, ats);
             MethPropWithInst mpwi = new MethPropWithInst(prop, ats);
             EXPRMEMGRP pMemGroup = GetExprFactory().CreateMemGroup(exprSrc, mpwi);
             EXPRPROP exprRes = GetExprFactory().CreateProperty(typeBase, null, null, pMemGroup, pwt, mwt, null);
@@ -142,10 +142,10 @@ namespace Microsoft.CSharp.RuntimeBinder.Semantics
         }
     }
 
-    internal partial class ExpressionBinder
+    internal sealed partial class ExpressionBinder
     {
         // Create an expr for exprSrc.Value where exprSrc.type is a NullableType.
-        internal EXPR BindNubValue(EXPR exprSrc)
+        private EXPR BindNubValue(EXPR exprSrc)
         {
             return m_nullable.BindValue(exprSrc);
         }

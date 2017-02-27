@@ -1,18 +1,20 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Diagnostics;
 using Microsoft.CSharp.RuntimeBinder.Syntax;
 
 namespace Microsoft.CSharp.RuntimeBinder.Semantics
 {
-    internal partial class ExpressionBinder
+    internal sealed partial class ExpressionBinder
     {
-        protected class UnaOpSig
+        private class UnaOpSig
         {
-            public UnaOpSig()
+            protected UnaOpSig()
             {
             }
+
             public UnaOpSig(PredefinedType pt, UnaOpMask grfuom, int cuosSkip, PfnBindUnaOp pfn, UnaOpFuncKind fnkind)
             {
                 this.pt = pt;
@@ -28,10 +30,10 @@ namespace Microsoft.CSharp.RuntimeBinder.Semantics
             public UnaOpFuncKind fnkind;
         }
 
-        protected class UnaOpFullSig : UnaOpSig
+        private sealed class UnaOpFullSig : UnaOpSig
         {
-            private LiftFlags _grflt;
-            private CType _type;
+            private readonly LiftFlags _grflt;
+            private readonly CType _type;
 
             public UnaOpFullSig(CType type, PfnBindUnaOp pfn, LiftFlags grflt, UnaOpFuncKind fnkind)
             {

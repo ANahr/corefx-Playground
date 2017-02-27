@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -9,7 +10,7 @@ namespace Microsoft.CSharp.RuntimeBinder.Semantics
 {
     internal static class Operators
     {
-        private class OPINFO
+        private sealed class OPINFO
         {
             public OPINFO(TokenKind t, PredefinedName pn, ExpressionKind e, int c)
             {
@@ -17,9 +18,9 @@ namespace Microsoft.CSharp.RuntimeBinder.Semantics
                 methodName = pn;
                 expressionKind = e;
             }
-            public TokenKind iToken;
-            public PredefinedName methodName;
-            public ExpressionKind expressionKind;
+            public readonly TokenKind iToken;
+            public readonly PredefinedName methodName;
+            public readonly ExpressionKind expressionKind;
         }
 
         private static readonly Dictionary<OperatorKind, OPINFO> s_rgOpInfo = new Dictionary<OperatorKind, OPINFO>()
@@ -114,21 +115,25 @@ namespace Microsoft.CSharp.RuntimeBinder.Semantics
 
             return OperatorKind.OP_NONE;
         }
-        public static bool HasMethodName(OperatorKind op)
+
+        private static bool HasMethodName(OperatorKind op)
         {
             //Debug.Assert(IsValid(op));
             return GetMethodName(op) != PredefinedName.PN_COUNT;
         }
-        public static PredefinedName GetMethodName(OperatorKind op)
+
+        private static PredefinedName GetMethodName(OperatorKind op)
         {
             //Debug.Assert(IsValid(op));
             return GetInfo(op).methodName;
         }
-        public static Name GetMethodName(NameManager namemgr, OperatorKind op)
+
+        private static Name GetMethodName(NameManager namemgr, OperatorKind op)
         {
             Debug.Assert(HasMethodName(op));
             return namemgr.GetPredefName(GetMethodName(op));
         }
+
         public static bool HasDisplayName(OperatorKind op)
         {
             //Debug.Assert(IsValid(op));

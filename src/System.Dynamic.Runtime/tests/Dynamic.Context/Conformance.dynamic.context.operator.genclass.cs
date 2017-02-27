@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using Xunit;
 
@@ -236,7 +237,6 @@ namespace ManagedTests.DynamicCSharp.Conformance.dynamic.context.operate.genclas
     public class MemberClassWithAnotherTypeConstraint<T, U>
         where T : U
     {
-        public static int Status;
         public static implicit operator MyStruct[] (MemberClassWithAnotherTypeConstraint<T, U> p1)
         {
             return new MyStruct[]
@@ -697,7 +697,7 @@ namespace ManagedTests.DynamicCSharp.Conformance.dynamic.context.operate.genclas
         }
     }
 
-    static public class Extension
+    public static class Extension
     {
         public static int ExReturnTest(this int p)
         {
@@ -1038,7 +1038,7 @@ namespace ManagedTests.DynamicCSharp.Conformance.dynamic.context.operate.genclas
         public static int MainMethod()
         {
             Test.MyProp = null;
-            Type[] t = s_result.GetType().GetGenericArguments();
+            Type[] t = s_result.GetType().GenericTypeArguments;
             if (t.Length != 3 || t[0] != typeof(int) || t[1] != typeof(string) || t[1] != typeof(string))
                 return 1;
             if (s_result.Field == 4)
@@ -1250,7 +1250,7 @@ namespace ManagedTests.DynamicCSharp.Conformance.dynamic.context.operate.genclas
         }
     }
 
-    static public class Extension
+    public static class Extension
     {
         public static int Method(this string s)
         {
@@ -1436,7 +1436,7 @@ namespace ManagedTests.DynamicCSharp.Conformance.dynamic.context.operate.genclas
 
     public class Test
     {
-        [Fact]
+        [ConditionalFact(nameof(PlatformDetection) + "." + nameof(PlatformDetection.IsNotWindowsSubsystemForLinux))] // https://github.com/Microsoft/BashOnWindows/issues/513
         public static void DynamicCSharpRunTest()
         {
             Assert.Equal(0, MainMethod());

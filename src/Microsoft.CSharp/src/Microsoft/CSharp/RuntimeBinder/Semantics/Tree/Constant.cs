@@ -1,20 +1,21 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using System.Diagnostics;
 using System.Text;
 
 namespace Microsoft.CSharp.RuntimeBinder.Semantics
 {
-    internal class EXPRCONSTANT : EXPR
+    internal sealed class EXPRCONSTANT : EXPR
     {
-        public EXPR OptionalConstructorCall;
+        private EXPR OptionalConstructorCall;
         public EXPR GetOptionalConstructorCall() { return OptionalConstructorCall; }
         public void SetOptionalConstructorCall(EXPR value) { OptionalConstructorCall = value; }
 
         private CONSTVAL _val;
 
-        public bool IsZero
+        private bool IsZero
         {
             get
             {
@@ -29,8 +30,8 @@ namespace Microsoft.CSharp.RuntimeBinder.Semantics
             get
             {
                 return _val;
-            }
-            set
+            } 
+            private set
             {
                 _val = value;
             }

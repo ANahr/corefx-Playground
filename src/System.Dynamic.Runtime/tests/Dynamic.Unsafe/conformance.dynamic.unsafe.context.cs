@@ -1,5 +1,6 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for more information.
 
 using Xunit;
 
@@ -175,7 +176,7 @@ namespace ManagedTests.DynamicCSharp.conformance.dynamic.unsfe.context.freach03.
     //}
     //[TestClass]public class Test
     //{
-    //[Test][Priority(Priority.Priority2)]public void DynamicCSharpRunTest(){Assert.AreEqual(0, MainMethod(null));} public unsafe static int MainMethod(string[] args)
+    //[Test][Priority(Priority.Priority2)]public void DynamicCSharpRunTest(){Assert.AreEqual(0, MainMethod(null));} public static unsafe int MainMethod(string[] args)
     //{
     //int a = 1, b = 2, c = 3;
     //dynamic arrayp = new int*[] { &a, &b, &c };
